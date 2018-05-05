@@ -372,12 +372,7 @@ Catapult_daily <- transform(Catapult_daily, id=match(Player.Name, unique(Player.
 Player.Names <-
   Catapult_daily %>%
   group_by(Player.Name) %>%
-  summarize(PL = mean(Player.Load, na.rm=T)) %>%
-  filter(Player.Name != "Vadim Demidov") %>%
-  filter(Player.Name != "John AlWellness2age") %>%
-  filter(Player.Name != "Bashkim Kadrii") %>%
-  filter(Player.Name != "Rasmus Schuller") %>%
-  filter(Player.Name != "Jeb Brovsky")
+  summarize(PL = mean(Player.Load, na.rm=T))
 
 Player.Names<- transform(Player.Names, id2=match(Player.Name, unique(Player.Name)))
   Player.Names$id <- paste("Player", Player.Names$id2, sep = "_")
