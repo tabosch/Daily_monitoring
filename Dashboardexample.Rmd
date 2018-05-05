@@ -1,0 +1,191 @@
+---
+title: "Example Monitoring Dashboard"
+author: "Tyler Bosch"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(reshape2)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(data.table)
+library(tidyr)
+library(DT)
+library(shiny)
+library(ggrepel)
+library(gridExtra)
+
+DF_wellness <- read.csv("wellness_deidentified.csv")
+DF_wellness$newdate <- as.Date(DF_wellness$newdate, "%Y-%m-%d")
+DF_wellness_daily <- DF_wellness %>% filter(newdate >= max(DF_wellness$newdate))
+DF_wellness_daily$id <- ordered(DF_wellness_daily$id, levels = rev(sort(unique(DF_wellness_daily$id))))
+id <- DF_wellness_daily$id
+Weigh_in_check <- data.frame(id)
+Weigh_in_check <- setDF(setDT(Weigh_in_check)[setDT(DF_wellness_daily), Wellness_Total := Wellness_Total, on=c("id")])
+Weigh_in_check$Weighed_in <- ifelse(is.na(Weigh_in_check$Wellness_Total), "no", "yes")
+```
+
+Team Daily Overview {data-navmenu="Wellness"}
+================================================
+
+
+Row (data-width = 1500)
+--------------------------------
+
+###  Has not filled out Wellness {data-height=600}
+
+<style>
+div.yellow pre {background-color:yellow; }
+div.yellow pre.r {background-color:yellow; }
+</style>
+
+<div class = "yellow">
+```{r, echo=FALSE}
+renderPrint({
+  print(Weigh_in_check$id[Weigh_in_check$Weighed_in=="no"], max.levels=0)
+})
+```
+</div>
+
+Row {.tabset}
+----------------------------
+
+###Wellness 
+
+```{r, echo=FALSE, fig.height=20, fig.width=40}
+renderPlot({
+  
+  Daily <- ggplot(DF_wellness_daily, aes(reorder(id, id), Well_S, fill=Well_S))+
+  geom_bar(stat="identity")+theme(axis.text.x= element_text(angle=90, size=12))+
+  scale_fill_gradient2(name="Wellness", low='red', mid= "yellow", high='green', midpoint=0)+
+  scale_x_discrete(name="")+ylab("Scaled Wellness < 0 is below their average")+coord_flip()+
+  geom_hline(VB, yintercept = -1, colour = "yellow", lty=2, size=1)+
+  geom_hline(VB, yintercept = -2.5, colour = "red", lty=3, size=2)+ggtitle(DF_wellness_daily$newdate)
+
+
+
+Weekly <- ggplot(data=subset(DF_wellness, newdate >= max(DF_wellness$newdate) - days(7)), aes(newdate, Well_S, colour=Well_S))+
+  geom_point(size=2)+geom_line()+scale_colour_gradient(low="red", high="green")+
+  geom_hline(yintercept= -2, colour="red", lty=2)+geom_hline(yintercept= 0, lty=3)+
+  facet_grid(id~., switch = "y", scale="free_y")+
+  theme(axis.title=element_blank(), axis.text.y = element_blank(), axis.text.x = element_blank(), axis.ticks =
+          element_blank(),
+        plot.title = element_text(size = rel(1), colour = 'grey10'),
+        panel.background = element_rect(fill = 'white'),
+        strip.background = element_blank(),
+        panel.spacing = unit(0.9, "null"),strip.text.y = element_text(angle = 180),
+        plot.margin = unit(c(0.90,0.5,0.90,0.5), "cm"))+ggtitle("Weekly Wellness (black = average, red = very low)")
+                                                                                                                                                                                                                                                                                                                     
+
+grid.arrange(Daily, Weekly, ncol=2)
+
+})
+```
+
+###Running Team Avg Wellness Scaled
+```{r, echo=FALSE, fig.height=20, fig.width=40}
+DF_wellness <-
+  DF_wellness
+DF_wellness$Wellness_marker <- ifelse(DF_wellness$Wellness_Total_Scale > 1, 24, ifelse(DF_wellness$Wellness_Total_Scale < -1.5, 25, 21))
+DF_wellness$Wellness_marker_color <- ifelse(DF_wellness$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness$Wellness_Total_Scale < -1.5, "red", "yellow"))
+DF_wellness_day <- 
+  DF_wellness %>%
+  group_by(newdate) %>%
+  summarize(Wellness_Total_Scale = mean(Wellness_Total_Scale, na.rm=T))
+DF_wellness_day$Wellness_marker_color <- ifelse(DF_wellness_day$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness_day$Wellness_Total_Scale < -1.5, "red", "yellow"))
+renderPlot({
+  
+  DF_wellness
+DF_wellness$Wellness_marker <- ifelse(DF_wellness$Wellness_Total_Scale > 1, 24, ifelse(DF_wellness$Wellness_Total_Scale < -1.5, 25, 21))
+DF_wellness$Wellness_marker_color <- ifelse(DF_wellness$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness$Wellness_Total_Scale < -1.5, "red", "yellow"))
+DF_wellness_day <- 
+  DF_wellness %>%
+  group_by(newdate) %>%
+  summarize(Wellness_Total_Scale = mean(Wellness_Total_Scale, na.rm=T))
+DF_wellness_day$Wellness_marker_color <- ifelse(DF_wellness_day$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness_day$Wellness_Total_Scale < -1.5, "red", "yellow"))
+ggplot(data=subset(DF_wellness, newdate >= max(DF_wellness$newdate) - days(21)), aes(newdate, Wellness_Total_Scale))+geom_bar(data=subset(DF_wellness_day, newdate >= today() - days(21)), aes(fill= Wellness_marker_color), stat="summary", fun.y="mean")+geom_point(aes(shape=Wellness_marker, fill= Wellness_marker_color), stat="identity", size = 3)+scale_shape_identity()+scale_fill_identity()+geom_text(data=subset(DF_wellness, newdate >= max(DF_wellness$newdate)- days(21)), aes(newdate, y= 0, label=day), angle=90, vjust=2)+geom_text_repel(data=subset(DF_wellness, newdate >= max(DF_wellness$newdate)- days(14) & Wellness_Total_Scale < -2.5), aes(newdate, Wellness_Total_Scale, label=id))+theme(axis.text.x= element_text(angle=90, size=12))
+
+})
+```
+
+
+Column (data-width=200)
+--------------------------
+
+Alerts
+
+### Sleep Quality < -1.0 {data-height=200}
+<style>
+div.red pre {background-color:red; }
+div.red pre.r {background-color:lightred; }
+</style>
+
+<div class = "red">
+```{r, echo=FALSE}
+renderPrint({
+  print(DF_wellness_daily$id[DF_wellness_daily$SQ_S < -1.0 ], max.levels=0)
+})
+```
+</div>
+
+### Sleep Length < -1.0 {data-height=200}
+<style>
+div.red pre {background-color:red; }
+div.red pre.r {background-color:lightred; }
+</style>
+
+<div class = "red">
+```{r, echo=FALSE}
+renderPrint({
+  print(DF_wellness_daily$id[DF_wellness_daily$SL_S < -1.0 ], max.levels=0)
+})
+```
+</div>
+
+### RPE < -1.0 {data-height=200}
+<style>
+div.red pre {background-color:red; }
+div.red pre.r {background-color:lightred; }
+</style>
+
+<div class = "red">
+```{r, echo=FALSE}
+renderPrint({
+  print(DF_wellness_daily$id[DF_wellness_daily$RPE_S < -1.0 ], max.levels=0)
+})
+```
+</div>
+
+### Soreness < -1.0 {data-height=200}
+<style>
+div.red pre {background-color:red; }
+div.red pre.r {background-color:lightred; }
+</style>
+
+<div class = "red">
+```{r, echo=FALSE}
+renderPrint({
+  print(DF_wellness_daily$id[DF_wellness_daily$Sore_S < -1.0 ], max.levels=0)
+})
+```
+</div>
+
+### Stress < -1.0 {data-height=200}
+<style>
+div.red pre {background-color:red; }
+div.red pre.r {background-color:lightred; }
+</style>
+
+<div class = "red">
+```{r, echo=FALSE}
+renderPrint({
+  print(DF_wellness_daily$id[DF_wellness_daily$Stress_S < -1.0 ], max.levels=0)
+})
+```
+</div>
