@@ -6,3 +6,5 @@ https://tbosch.shinyapps.io/Dashboardexample/
 
 Added an example of how to incorporate into Flexdashboard
 
+Added in differentiated RPE to assess how hard players felt that had to think, how hard their cardiovascular system was taxed and muscular system.
+
