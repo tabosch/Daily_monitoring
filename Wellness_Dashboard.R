@@ -16,7 +16,7 @@ Daily <- ggplot(DF_wellness_daily, aes(reorder(id, id), Well_S, fill=Well_S))+
   scale_fill_gradient2(name="Wellness", low='red', mid= "yellow", high='green', midpoint=0)+
   scale_x_discrete(name="")+ylab("Scaled Wellness < 0 is below their average")+coord_flip()+
   geom_hline(VB, yintercept = -1, colour = "yellow", lty=2, size=1)+
-  geom_hline(VB, yintercept = -2.5, colour = "red", lty=3, size=2)+ggtitle(DF_wellness_daily$Date)
+  geom_hline(VB, yintercept = -2.5, colour = "red", lty=3, size=2)+ggtitle(DF_wellness_daily$newdate)
 
 
 
@@ -33,4 +33,4 @@ Weekly <- ggplot(data=subset(DF_wellness, newdate >= max(DF_wellness$newdate) - 
         plot.margin = unit(c(0.90,0.5,0.90,0.5), "cm"))+ggtitle("Weekly Wellness (black = average, red = very low)")
                                                                                                                                                                                                                                                                                                                      
 
-grid.arrange(Daily, Weekly, WeeklyML, ncol=3)
+grid.arrange(Daily, Weekly, ncol=2)
