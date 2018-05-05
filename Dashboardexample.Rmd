@@ -21,6 +21,11 @@ library(shiny)
 library(ggrepel)
 library(gridExtra)
 library(ggrepel)
+library(chron)
+library(d3heatmap)
+library(plotly)
+library(tidyverse)
+library(tibble)
 
 DF_wellness <- read.csv("wellness_deidentified.csv")
 DF_wellness$newdate <- as.Date(DF_wellness$newdate, "%Y-%m-%d")
@@ -48,6 +53,56 @@ VB_D_RPE_update$M_RPE_S <- ave(VB_D_RPE_update$M_RPE, VB_D_RPE_update$id, VB_D_R
 VB_D_RPE_2 <-
   VB_D_RPE %>%
   filter(newdate==max(newdate))
+
+catdata <- read.csv("catdata.csv")
+catdata$Date <- as.Date(catdata$Date, format ="%m/%d/%y")
+ catdata$Week <- lubridate::isoweek(ymd(catdata$Date))
+ catdata$day <- weekdays(as.Date(catdata$Date))
+ catdata$day <- as.factor(catdata$day)
+ catdata$day <- factor(catdata$day, c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+catdata$Duration_minutes <- 60 * 24 * as.numeric(times(catdata$Duration))
+catdata$Player_Load_minute <- catdata$Player.Load/catdata$Duration_minutes
+catdata$Meters_minute <- catdata$Odometer/catdata$Duration_minutes
+
+ Catapult_daily <-
+  catdata %>%
+  filter(Period.Number < 1)
+Catapult_daily <-
+  Catapult_daily %>%
+  filter(Period.Name != "Fitness ")
+Catapult_daily <-
+  Catapult_daily %>%
+  filter(Period.Name != "Fitness PM")
+Catapult_daily <-
+  Catapult_daily %>%
+  filter(Period.Name != "Fitness PM Session")
+Catapult_daily <-
+  Catapult_daily %>%
+  filter(Period.Name != "Fitness")
+Catapult_daily$Period.Name <- ifelse(Catapult_daily$Period.Name == "-4Day", "-4 Day", as.character(Catapult_daily$Period.Name))
+Catapult_daily$Meters_scale <- ave(Catapult_daily$Odometer, Catapult_daily$Player.Name, FUN=scale)
+Catapult_daily$PL_scale <- ave(Catapult_daily$Player.Load, Catapult_daily$Player.Name,  FUN=scale)
+Catapult_daily$Type <- ifelse(Catapult_daily$Period.Name != "-6 Day" & Catapult_daily$Period.Name != "-5 Day" & Catapult_daily$Period.Name != "-4 Day" & Catapult_daily$Period.Name != "-3 Day" & Catapult_daily$Period.Name != "-2 Day" & Catapult_daily$Period.Name != "-1 Day" & Catapult_daily$Period.Name != "-2 Day Regen" & Catapult_daily$Period.Name != "-4 Day PM", "Match", as.character(Catapult_daily$Period.Name))
+cat_avg <- Catapult_daily %>% group_by(Player.Name, Type) %>% summarize(PLmean = mean(Player.Load, na.rm=T), PLsd = sd(Player.Load, na.rm=T))
+Catapult_daily <- setDF(setDT(Catapult_daily)[setDT(cat_avg), PLmean :=PLmean, on = c("Player.Name", "Type")])
+Catapult_daily <- setDF(setDT(Catapult_daily)[setDT(cat_avg), PLsd :=PLsd, on = c("Player.Name", "Type")])
+Catapult_daily$Total_Player.Load <- ave(Catapult_daily$Player.Load, Catapult_daily$Player.Name, Catapult_daily$Week, FUN=sum)
+Catapult_daily$Total_Distance <- ave(Catapult_daily$Odometer, Catapult_daily$Player.Name, Catapult_daily$Week, FUN=sum)
+Catapult_daily$HSR_Distance <- ave(Catapult_daily$Velocity.Band.5.Dist, Catapult_daily$Player.Name, Catapult_daily$Week, FUN=sum)
+Catapult_daily$Sprint_Distance <- ave(Catapult_daily$Velocity.Band.6.Dist, Catapult_daily$Player.Name, Catapult_daily$Week, FUN=sum)
+Catapult_daily$Percent_HSR <- Catapult_daily$Sprint_Distance/Catapult_daily$Total_Distance *100
+Catapult_daily$min_day_week <- ave(Catapult_daily$Date, Catapult_daily$Week, FUN=min)
+Catapult_daily$max_day_week <- ave(Catapult_daily$Date, Catapult_daily$Week, FUN=max)
+Catapult_daily$Week2 <- paste(Catapult_daily$min_day_week, Catapult_daily$max_day_week, sep="-")
+Catapult_daily_today <- Catapult_daily %>% filter(Date==max(Date))
+Catapult_daily_mean <- Catapult_daily %>% group_by(Date, Type, Period.Name, Week) %>% summarize(Player_Load_mean = mean(Player.Load, na.rm=T), Player_Load_max = max(Player.Load, na.rm=T), Total_distance_mean = mean(Odometer, na.rm=T), Total_distance_max = max(Odometer, na.rm=T), Meters_minute_mean = mean(Meters_minute, na.rm=T), Meters_minute_max = max(Meters_minute, na.rm=T), PL_scale = mean(PL_scale, na.rm=T), Meters_scale = mean(Meters_scale, na.rm=T), PLmean = mean(PLmean, na.rm=T), PLsd = mean(PLsd, na.rm=T))
+
+drills_compare <- read.csv("drills_compare.csv")
+
+Soccer_data <- read.csv("Soccer_data_final_reg_season.csv")
+Soccer_data <- Soccer_data[,c(2:26)]
+
+Passing <- read.csv("passing_data_final_reg_season.csv")
 ```
 
 Team Daily Overview {data-navmenu="Wellness"}
@@ -239,3 +294,401 @@ renderPrint({
 </div>
 
 
+
+
+Daily and Running Totals {data-navmenu="Monitoring"}
+==================================================
+
+Column {.tabset}
+------------------
+
+###Daily Load Comparison to Player Avg
+```{r, echo=FALSE}
+
+renderPlotly({
+  Catapult_daily_today <- transform(Catapult_daily_today, id=match(Player.Name, unique(Player.Name)))
+  Catapult_daily_today$id <- paste("Player", Catapult_daily_today$id, sep = "_")
+Catapult_daily_today$cols <- ifelse(Catapult_daily_today$Player.Load > 350, "red", ifelse(Catapult_daily_today$Player.Load <250, "yellow", "green"))
+  
+b <- ggplot(Catapult_daily_today, aes(id, Player.Load))+geom_point(aes(colour = cols), stat="identity", size=4)+scale_color_identity()+geom_point(aes(id, PLmean), shape = 23)+geom_errorbar(aes( x=id, Player.Load, ymin=PLmean-PLsd *.5, ymax = PLmean + PLsd*.5 ))+coord_flip()+ggtitle(print(Catapult_daily_today$Period.Name))
+ggplotly(b)
+})
+```
+
+###Cumulative Team Load per day
+```{r, echo=FALSE}
+
+renderPlot({
+
+  ggplot(Catapult_daily, aes(Date, Player.Load, fill=Odometer))+geom_bar(stat="identity")+facet_wrap(~Week, scale="free_x")+geom_text(aes(Date, 100, label=Period.Name), stat="summary", fun.y="mean", angle=90, colour="black", hjust= -.1)+scale_fill_gradient2(low="yellow", mid="green", high="red")
+})
+```
+
+###Avg Load per day
+```{r, echo=FALSE}
+renderPlot({
+ 
+ggplot(Catapult_daily_mean, aes(Date, Player_Load_mean, fill=Meters_minute_mean))+geom_bar(stat="summary", fun.y="mean")+facet_wrap(~Week, scale="free_x")+geom_text(aes(Date, 100, label=Period.Name), stat="summary", fun.y="mean", angle=90, colour="black", hjust= -.1, size=2.5)+scale_fill_gradient2(name="Avg Meters/min\n(intensity)",low="yellow", mid="green", high="red")+ylab("Average PlayerLoad (Volume)")+geom_point(aes(Date, PLmean), shape=23, size=2, fill = "green", colour="green")+geom_errorbar(aes(Date, PLmean, ymin=PLmean-PLsd*.5, ymax=PLmean+PLsd*.5), color="green")
+})
+```
+
+
+Drill Breakdown {data-navmenu="Monitoring"}
+===============================================
+
+Column {.sidebar}
+--------------------
+
+###Select Drill Type
+```{r, echo=FALSE}
+
+selectInput("Type", "Type", choices = drills_compare$Type, selected = drills_compare$Type[[3]], multiple = TRUE )
+```
+
+Column
+-----------
+
+###Player Load
+```{r, echo=FALSE}
+renderPlot({
+ ggplot(data=subset(drills_compare, Type %in% input$Type), aes(reorder(Period.Name, Player_Load_minute), Player_Load_minute, fill=Meters_minute))+geom_bar(stat="identity")+scale_fill_gradient2(name="Meters/minute", low="green", mid="yellow", high="red", midpoint=50)+facet_wrap(~Type, scale="free")+coord_flip()+xlab("Drill Name")+ylab("Player Load/Minute")
+
+}
+)
+```
+
+Monitoring Dashboard {data-navmenu="Monitoring"}
+===============================================
+
+Column {.sidebar}
+------------------
+```{r, echo=FALSE}
+selectInput("week", "Week", choices = Catapult_daily$Week2, selected=Catapult_daily$Week2[Catapult_daily$Week >= max(Catapult_daily$Week)], multiple = TRUE)
+
+selectInput("TD", "Training Day", choices = Catapult_daily$Period.Name, selected= c("-3 Day", "-2 Day", "-1 Day"), multiple=TRUE)
+
+Catapult_daily <- transform(Catapult_daily, id=match(Player.Name, unique(Player.Name)))
+  Catapult_daily$id <- paste("Player", Catapult_daily$id, sep = "_")
+Player.Names <-
+  Catapult_daily %>%
+  group_by(Player.Name) %>%
+  summarize(PL = mean(Player.Load, na.rm=T)) %>%
+  filter(Player.Name != "Vadim Demidov") %>%
+  filter(Player.Name != "John AlWellness2age") %>%
+  filter(Player.Name != "Bashkim Kadrii") %>%
+  filter(Player.Name != "Rasmus Schuller") %>%
+  filter(Player.Name != "Jeb Brovsky")
+
+Player.Names<- transform(Player.Names, id2=match(Player.Name, unique(Player.Name)))
+  Player.Names$id <- paste("Player", Player.Names$id2, sep = "_")
+checkboxGroupInput("player", "Athlete", choices = Player.Names$id, selected = Player.Names$id, inline=TRUE)
+```
+
+Column {.tabset}
+-----------------
+
+###Player Load
+```{r, echo=FALSE}
+renderPlot({
+
+  filtered <- 
+    Catapult_daily %>%
+    filter(Week2 %in% input$week, id %in% input$player, Period.Name %in% input$TD)
+  ggplot(filtered, aes(reorder(id, Total_Player.Load), Player.Load, fill=Velocity.Band.5.Dist))+geom_bar(stat="identity", position="stack")+scale_fill_gradient2(name="HSR_distance",low="yellow", mid="green", high="red")+facet_wrap(~Week2, scale="free_y")+coord_flip()+xlab("Player Name")+ylab("Total Player Load")+facet_wrap(~Week2, scale="free_y")+geom_text(aes(label=Period.Name), position=position_stack(vjust=.2))
+}
+)
+```
+
+###Total Distance adjusted for HSR
+```{r, echo=FALSE}
+
+ renderPlot({
+ 
+  filtered <- 
+    Catapult_daily %>%
+    filter(Week2 %in% input$week, id %in% input$player, Period.Name %in% input$TD)
+  ggplot(filtered, aes(reorder(id, Total_Distance), Odometer, fill=Velocity.Band.5.Dist))+geom_bar(stat="identity", position="stack")+scale_fill_gradient2(name="HSR_Distance",low="yellow", mid="green", high="red")+coord_flip()+xlab("Player Name")+ylab("Total Distance")+facet_wrap(~Week2, scale="free_y")+geom_text(aes(label=Period.Name),  position=position_stack(vjust=0.2))
+
+}
+)
+```
+
+
+###HSR Distance adjusted for Sprint Distance
+```{r, echo=FALSE}
+ renderPlot({
+
+  filtered <- 
+    Catapult_daily %>%
+    filter(Week2 %in% input$week, id %in% input$player, Period.Name %in% input$TD)
+  ggplot(filtered, aes(reorder(id, HSR_Distance), Velocity.Band.5.Dist, fill=Velocity.Band.6.Dist))+geom_bar(stat="identity", position="stack")+scale_fill_gradient2(name="Sprint Distance",low="yellow", mid="green", high="red")+coord_flip()+xlab("Player Name")+ylab("HSR Distance")+facet_wrap(~Week2, scale="free_y")+geom_text(aes(label=Period.Name), position=position_stack(vjust=0.2))
+
+}
+)
+```
+
+###Max Velocity
+```{r, echo=FALSE}
+ renderPlot({
+  
+  filtered <- 
+    Catapult_daily %>%
+    filter(Week2 %in% input$week, id %in% input$player, Period.Name %in% input$TD)
+  ggplot(filtered, aes(reorder(id, Max.Velocity), Max.Velocity, fill=Sprint_Distance))+geom_bar(stat="summary", fun.y="mean")+scale_fill_gradient2(name="Sprint Distance",low="yellow", mid="green", high="red")+coord_flip()+xlab("Player Name")+ylab("Max Velocity (m/s)")+facet_wrap(~Week2, scale="free_y")+geom_hline(yintercept=5, colour="orange", lty=2, size =3)+geom_hline(yintercept = 7.5, colour="red", lty=1, size=3)
+
+}
+)
+```
+
+
+Player Analytics Visuals {data-navmenu="Player Analytics"}
+===============================
+
+Column {data-width=200}
+--------------------
+
+### Filter Data
+Filter By Year and Select the Stats to View
+```{r, echo=FALSE, fig.width = 5}
+selectInput("Year2", "Year",
+            choices = Soccer_data$Year, multiple = TRUE, selected = "2017")
+
+selectInput("player_analytics", "Player(s)", choices = Soccer_data$Name, multiple=TRUE, selected="Kevin Molino")
+
+```
+
+Glossary: xGoals = expected goals; G_xGdiff = Difference between actual goals and expected goals positive is better than negative; Key_Passess = passes that lead directly to a shot; xAssist = expected assist (proportion that goal should have occured based on the pass); A_xAdiff = difference between assists and expected assists; Goal.Ass = sum of goals and assists; xGo_xAs = sum of expected goals and expected assists; Shots_p_96 = shots per 96 minutes (average MLS game); xGoalp96 = expected goals per 96 minutes; KP_p96 = key passes per 96 minutes; xAss_p96 = expected assists per 96 minutes; xG.xA_p96 = sum of expected goals plus expected assists per 96 minutes; xGoals_pShot = expected goals per shot; xA_pKP = expected assists per key pass
+
+Column {.tabset} 
+---------------
+
+###Player Stat Tracker
+You can search by player or club then sort by the variable you want to look at.
+```{r, echo=FALSE, fig.width=5, fig.height=10}
+renderPlot({
+  filtered <-
+  Soccer_data %>%
+  filter(Year %in% input$Year2,
+         Name %in% input$player_analytics)
+    filtered2 <- filtered[, c("Name", "Year", "Shots", "Goals", "xGoals", "G_xGdiff", "Key_Passes", "Assist", "xAssist", "A_xAdiff", "Goal.Ass", "xGo_xAs", "xGoals_pShot", "xA_pKP")]
+  filtered2_melt <- melt(filtered2, id.vars=c("Name", "Year"))
+ggplot(filtered2_melt, aes(reorder(Name, value), value, fill = variable))+geom_bar(stat="identity")+coord_flip()+xlab("Athlete")+facet_wrap(~Year, scale="free")
+
+})
+```
+
+
+###Player Stat Tracker per 96 minutes
+
+```{r, echo=FALSE, fig.width=5, fig.height=10}
+renderPlot({
+  filtered <-
+  Soccer_data %>%
+  filter(Year %in% input$Year2,
+         Name %in% input$player_analytics)
+    filtered3 <- filtered[, c("Name", "Year", "Shots_p_96", "xGoalp96", "KP_p96", "xAss_p96", "xGoals_pShot", "xA_pKP")]
+  filtered3_melt <- melt(filtered3, id.vars=c("Name", "Year"))
+ggplot(filtered3_melt, aes(reorder(Name, value), value, fill = variable))+geom_bar(stat="identity")+coord_flip()+xlab("Athlete")+geom_text(aes(Name, value, label=round(value,1)), position=position_stack(vjust=0.5))+facet_wrap(~Year, scale="free")+theme(axis.text.x= element_text( size=24, hjust=1, vjust=-.05),axis.title.x= element_text(size=20),axis.text.y= element_text(size=18, hjust=1, vjust=-.05),axis.title.y= element_text(size=20), legend.text=element_text(size=18), legend.position = "top")
+
+
+
+})
+```
+
+Player Impact {data-navmenu="Player Analytics"}
+===============================
+
+Column {data-width=200}
+-----------------------
+
+### Filter Data
+Use the sliders to filter the data
+```{r, echo=FALSE, fig.width = 5}
+sliderInput("Shots", "Shots", 20, 200, 50, step = 10)
+
+sliderInput("KPs", "Key Passes", 10, 110, 20, step =10)
+
+sliderInput("goals", "Goals", 5, 25, 10, step = 5)
+
+```
+
+Glossary: xGoals = expected goals; G_xGdiff = Difference between actual goals and expected goals positive is better than negative; Key_Passess = passes that lead directly to a shot; xAssist = expected assist (proportion that goal should have occured based on the pass); A_xAdiff = difference between assists and expected assists; Goal.Ass = sum of goals and assists; xGo_xAs = sum of expected goals and expected assists; Shots_p_96 = shots per 96 minutes (average MLS game); xGoalp96 = expected goals per 96 minutes; KP_p96 = key passes per 96 minutes; xAss_p96 = expected assists per 96 minutes; xG.xA_p96 = sum of expected goals plus expected assists per 96 minutes; xGoals_pShot = expected goals per shot; xA_pKP = expected assists per key pass
+
+
+Column {.tabset} 
+------------------
+
+###Attacking Specialists
+
+```{r, echo=FALSE, fig.width=4, fig.height=12}
+renderPlot({
+  filtered_Playmakers <-
+  Soccer_data %>%
+  filter(Shots > input$Shots,
+         Key_Passes > input$KPs,
+         Goals > input$goals) %>%
+  select(Year:xA_pKP)
+    
+ggplot(filtered_Playmakers, aes(xGoals_pShot, xA_pKP, label = Name))+geom_point(aes(shape = as.factor(as.character(Year)), colour = Club, size = xGoals), stat="identity" )+ xlab("Expected Goals per Shot")+ ylab("Expected Assists per Key Pass")+geom_label_repel()+scale_shape_discrete(name = "Year")
+})
+
+```
+
+###Table
+
+```{r, echo=FALSE, fig.width=5, fig.height=10}
+renderDataTable({
+  filtered_Playmakers <-
+  Soccer_data %>%
+  filter(Shots > input$Shots,
+         Key_Passes > input$KPs,
+         Goals > input$goals) %>%
+  select(Year:xA_pKP)
+    filtered_Playmakers
+}
+,options = list(
+scrollY = '300px', paging = TRUE, scrollX = TRUE))
+```
+
+###Goals versus Goal to expected Goal difference
+
+```{r, echo=FALSE, fig.width=5, fig.height=10}
+renderPlot({
+  filtered_Playmakers <-
+  Soccer_data %>%
+  filter(Shots > input$Shots,
+         Key_Passes > input$KPs,
+         Goals > input$goals) %>%
+  select(Year:xA_pKP)
+    
+ggplot(filtered_Playmakers, aes(Goals, G_xGdiff, label = Name))+geom_rect(data=NULL,aes(xmin=15,xmax=25,ymin=4,ymax=8),
+                    fill="lightgreen")+geom_point(aes(shape = as.factor(as.character(Year)), colour = Club, size = Shots), stat="identity" )+ xlab("Goals Scored")+ ylab("Difference in Goals versus expected Goals ")+geom_label_repel()+scale_y_continuous(breaks = c(-6,-4,-2,0,2,4,6,8,10,12))+xlim(5,25)+scale_shape_discrete(name = "Year")
+})
+```
+
+###Shots versus xGoals per Shot
+
+```{r, echo=FALSE, fig.width=5, fig.height=10}
+renderPlot({
+  filtered_Playmakers <-
+  Soccer_data %>%
+  filter(Shots > input$Shots,
+         Key_Passes > input$KPs,
+         Goals > input$goals) 
+    
+ggplot(filtered_Playmakers, aes( xGoals_pShot, Shots, colour = Goals, label = Name))+geom_point(aes(shape=as.factor(Year)), stat="identity" )+ xlab("Expected Goals per Shot")+scale_colour_gradient2(low="red", mid="yellow", high="darkgreen", midpoint=10)+ylab("Shots")+geom_label_repel()
+})
+```
+
+
+
+
+2017 Club Comparisons {data-navmenu="Player Analytics"}
+===============================
+
+Column {data-width=150}
+-----------------------
+
+### Filter Data
+
+```{r, echo=FALSE, fig.width = 5}
+
+selectInput("Club", "Club", choices = Soccer_data$Club, selected= Soccer_data$Club=="MN")
+
+```
+
+Column {data-width=1200}
+-----------------
+
+###Stat Heat Map (Hover over to see the values)
+
+```{r, echo=FALSE, fig.width = 5, fig.height=10}
+renderD3heatmap({
+  filter_Club <-
+    Soccer_data %>%
+    filter(Year > 2016,
+           Club == input$Club)
+   filter_Club2 <- filter_Club[, c("Name", "Minutes", "Shots", "Goals", "xGoals", "G_xGdiff", "Key_Passes", "Assist", "xAssist", "A_xAdiff", "Goal.Ass", "xGo_xAs", "xGoals_pShot", "xA_pKP", "Shots_p_96", "xGoalp96", "KP_p96")]
+   
+  filter_Club3 <- filter_Club2 %>% remove_rownames %>% column_to_rownames(var="Name")
+   
+  d3heatmap(filter_Club3, scale="column", colors = "YlOrRd", dendrogram = "none", width = 100, cexRow = .8, cexCol = .8)
+  
+})
+
+```
+
+Column {data-width=500}
+-----------------
+
+```{r, echo=FALSE}
+renderDataTable({
+filter_Club <-
+    Soccer_data %>%
+    filter(Year > 2016,
+           Club == input$Club)
+ 
+  filter_Club[1:15,c("Name", "Minutes", "xGoals", "Key_Passes")]
+})
+```
+
+
+
+Passing Analytics {data-navmenu="Player Analytics"}
+=====================================================
+
+Column {.sidebar}
+----------------------
+
+### Filter Data
+
+```{r, echo=FALSE, fig.width = 5}
+
+selectInput("Club2", "Club", choices = Passing$Club, selected= Passing$Club[[220]] , multiple = TRUE)
+
+sliderInput("pass", "Passes", 50, 1000, 100, step = 100)
+
+```
+
+Column {.tabset}
+--------------------
+
+###Attacking 3rd
+
+```{r, echo=FALSE}
+renderPlot({
+filter_pass <-
+    Passing %>%
+    filter(Club %in% input$Club2,
+           Att_3rd_Passes > input$pass)
+ 
+  ggplot(filter_pass, aes(Att_3rd_Passes, Att_3rd_xPRCT, colour=Att_3rd_PRCT_diff, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 1.0)+geom_text(aes(label=Name), vjust = -1 )+geom_text(aes(label=Att_3rd_PRCT), vjust=2)+theme_dark()+xlab("# of Passes in Attacking Third")+ylab("Expected Passing Percentage in Attacking Third")
+})
+```
+
+
+###Middle 3rd
+
+```{r, echo=FALSE}
+renderPlot({
+filter_pass_mid <-
+    Passing %>%
+    filter(Club %in% input$Club2,
+           Middle_3rd_Passes > input$pass)
+ 
+  ggplot(filter_pass_mid, aes(Middle_3rd_Passes, Middle_3rd_xPRCT, colour=Middle_3rd_PRCT_diff, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 1.0)+geom_text(aes(label=Name), vjust = -1 )+geom_text(aes(label=Middle_3rd_PRCT), vjust=2)+theme_dark()+xlab("# of Passes in Middle Third")+ylab("Expected Passing Percentage in Middle Third")
+})
+```
+
+###Defensive 3rd
+
+```{r, echo=FALSE}
+renderPlot({
+filter_pass_def <-
+    Passing %>%
+    filter(Club %in% input$Club2,
+           DEF_3rd_Passes > input$pass)
+ 
+  ggplot(filter_pass_def, aes(DEF_3rd_Passes, DEF_3rd_xPRCT, colour=DEF_3rd_PRCT_diff, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 0.0)+geom_text(aes(label=Name), vjust = -1 )+geom_text(aes(label=DEF_3rd_PRCT), vjust=2)+theme_dark()+xlab("# of Passes in Defensive Third")+ylab("Expected Passing Percentage in Defensive Third")
+})
+```
