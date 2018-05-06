@@ -108,7 +108,7 @@ Soccer_data <- Soccer_data[,c(2:26)]
 
 Passing <- read.csv("passing_data_final_reg_season.csv")
 
- 
+ ACWR_Solver <- read.csv("ACWR_Solver.csv")
 ```
 
 Team Daily Overview {data-navmenu="Wellness"}
@@ -317,6 +317,191 @@ ggplot(data=subset(catdata, Position %in% c("F", "M", "D") & Date >= max(Date) &
 ```
 
 
+###ACR Table
+
+```{r, echo=FALSE}
+renderDataTable({
+  ACWR_Solver$ACR_weighted <- round(ACWR_Solver$ACR_weighted, 2)
+  datatable(ACWR_Solver,extensions= c('Scroller', 'FixedColumns'), options = list(
+    scrollY = 400, paging = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns= 1)), rownames = FALSE)%>%  
+    formatStyle('Player.Load', background =  styleColorBar(range(ACWR_Solver$Player.Load) , 'lightblue'),  backgroundSize = '95% 50%', backgroundRepeat = 'no-repeat', backgroundPosition = 'center') %>%  
+    formatStyle('Odometer', background =  styleColorBar(range(ACWR_Solver$Odometer), 'lightblue'),  backgroundSize = '95% 50%', backgroundRepeat = 'no-repeat',backgroundPosition = 'center') %>%  formatStyle('ACR_weighted', 'ACR_weighted', backgroundColor = styleInterval(c(0.8,1.3), c('yellow', 'green', 'red')))
+})
+
+```
+
+Player Report
+====================
+  
+Column {.sidebar}
+-------------------
+  
+###Player Select
+```{r,echo=FALSE}
+
+selectInput("Player_report", "Select Athlete", catdata$id, selected = catdata$id[[2]])
+```
+
+Column  {data-width=500}
+---------------------------------
+  
+### Daily Load
+```{r, echo=FALSE}
+
+
+
+barplot1 <- reactive({
+  player_drills <- catdata %>%
+    filter(id == input$Player_report,
+           Date >= max(Date), Period.Number > 0)
+  
+  
+ 
+  
+  ggplot(player_drills, aes(reorder(Period.Name, Period.Number), Player.Load, fill=Meters_minute))+geom_bar(stat="identity")+facet_wrap(~id)+geom_text(aes(y=5,label=Period.Name), angle=90, hjust=-.1, size=3)+theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+scale_fill_gradient2(low="yellow", mid="green", high="red")
+})
+
+renderPlot({
+  barplot1()
+})
+
+```
+
+###Loading
+```{r, echo=FALSE,}
+
+barplot2 <- reactive({
+ 
+  catdata$day <- weekdays(as.Date(catdata$Date))
+  catdata$day <- as.factor(catdata$day)
+  catdata$day <- factor(catdata$day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"))
+  plot2 <-
+    catdata %>%
+    filter(id == input$Player_report, 
+           Date > max(Date) - days(21), Period.Number < 1) %>%
+    group_by(id, Date, day) %>%
+    select(id, Date, day, Player.Load, Odometer, Meters_minute)
+  
+  ggplot(plot2, aes(Date, Player.Load, fill=Meters_minute))+geom_bar(stat="identity")+scale_fill_gradient2(low="yellow", mid="green", high="red", midpoint=50)+geom_text(aes(Date, y= 5, label = day), angle = 90, hjust= -.2)+geom_text(aes(x=Date, y= Player.Load, label=round(Meters_minute,2)), angle = 90, hjust = 1)+theme(axis.text=element_text(size=12),axis.title=element_text(size=14,face="bold"),plot.title = element_text(size = 20, face = "bold"))+xlab("Date")+ylab("Player Load(au) ")+ggtitle("Chronic (3week) Loading")
+})
+
+renderPlot({
+  barplot2()
+})
+
+```
+
+Column {data-width=500}
+----------------
+  
+### Player Load Range and Day
+```{r, echo=FALSE}
+
+barplot3 <- reactive({
+  catdata$day <- weekdays(as.Date(catdata$Date))
+  catdata$day <- as.factor(catdata$day)
+  catdata$day <- factor(catdata$day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"))
+  plot3 <-
+    catdata %>%
+    filter(id == input$Player_report, Period.Number < 1) %>% group_by(id, Date, day) %>%
+    summarize(Player.Load = round(mean(Player.Load, na.rm= T),2), Odometer = round(mean(Odometer, na.rm=T),2), Meters_minute = round(mean(Meters_minute, na.rm=T),2))
+  plot5 <- catdata %>%
+    filter(id == input$Player_report, Date >= max(Date) - days(7), Period.Number < 1) %>% group_by(id, Date, day) %>%
+    select(id, Date, day, Player.Load, Odometer, Meters_minute)
+  ggplot(plot3, aes(day, Player.Load))+geom_violin(stat="ydensity")+geom_point(data=plot5, aes(day, Player.Load), colour="red", size=3)+geom_text(data=plot5, aes(label=round(Player.Load,0)), vjust=2, colour="red")+coord_flip()+theme(axis.text=element_text(size=12),axis.title=element_text(size=14,face="bold"),plot.title = element_text(size = 14, face = "bold"))+xlab(" ")+ylab("Player Load (au) ")+ggtitle("Range of PL with Today's PL (Red Dot)")
+})
+
+renderPlot({
+  barplot3()
+})
+
+```
+
+
+###Distance Covered 
+```{r, echo=FALSE}
+barplot4 <- reactive({
+  catdata$day <- weekdays(as.Date(catdata$Date))
+  catdata$day <- as.factor(catdata$day)
+  catdata$day <- factor(catdata$day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"))
+  plot4 <-
+    catdata %>%
+    filter(id == input$Player_report, Period.Number < 1) %>% group_by(id, Date, day) %>%
+    select(id, Date, day, Player.Load, Odometer, Meters_minute)
+  plot6 <- catdata %>%
+    filter(id == input$Player_report, Date >= max(Date) - days(7), Period.Number < 1) %>% group_by(id, Date, day) %>%
+    select(id, Date, day, Player.Load, Odometer, Meters_minute)
+  ggplot(plot4, aes(day, Odometer))+geom_violin(stat="ydensity")+geom_point(data=plot6, aes(day, Odometer, colour=Meters_minute), size=3)+scale_colour_gradient2(low="yellow", mid="green", high = "red")+geom_text(data=plot6, aes(label=round(Odometer,0)), vjust=2, colour="red")+coord_flip()+theme(axis.text=element_text(size=12),axis.title=element_text(size=14,face="bold"),plot.title = element_text(size = 14, face = "bold"))+xlab(" ")+ylab("Distance (m) ")+ggtitle("Range of Dist with Today's Dist (Red Dot)")
+})
+
+renderPlot({
+  barplot4()
+})
+
+```
+
+Column {data-width=200}
+--------------------------
+
+Alerts
+
+### Player Load low < -1.5 {data-height=200}
+<style>
+div.yellow pre {background-color:yellow; }
+div.yellow pre.r {background-color:yellow; }
+</style>
+
+<div class = "yellow">
+```{r, echo=FALSE}
+renderPrint({
+  print(Catapult_daily$id[Catapult_daily$Date >= max(Catapult_daily$Date) & Catapult_daily$PL_scale < -1.5 ], max.levels=0)
+})
+```
+</div>
+
+### Distance Low < -1.5 {data-height=200}
+<style>
+div.yellow pre {background-color:yellow; }
+div.yellow pre.r {background-color:yellow; }
+</style>
+
+<div class = "yellow">
+```{r, echo=FALSE}
+renderPrint({
+  print(Catapult_daily$id[Catapult_daily$Date >= max(Catapult_daily$Date) & Catapult_daily$Meters_scale < -1.5 ], max.levels=0)
+})
+```
+</div>
+
+### Player Load High > 2.0 {data-height=200}
+<style>
+div.red pre {background-color:red; }
+div.red pre.r {background-color:red; }
+</style>
+
+<div class = "red">
+```{r, echo=FALSE}
+renderPrint({
+  print(Catapult_daily$id[Catapult_daily$Date >= max(Catapult_daily$Date) & Catapult_daily$PL_scale >= 1.5 ], max.levels=0)
+})
+```
+</div>
+
+### Distance High > 2.0SD {data-height=200}
+<style>
+div.red pre {background-color:red; }
+div.red pre.r {background-color:red; }
+</style>
+
+<div class = "red">
+```{r, echo=FALSE}
+renderPrint({
+  print(Catapult_daily$id[Catapult_daily$Date >= max(Catapult_daily$Date) & Catapult_daily$Meters_scale >= 1.5 ], max.levels=0)
+})
+```
+</div>
 
 
 
