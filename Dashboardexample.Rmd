@@ -26,6 +26,7 @@ library(d3heatmap)
 library(plotly)
 library(tidyverse)
 library(tibble)
+library(zoo)
 
 DF_wellness <- read.csv("wellness_deidentified.csv")
 DF_wellness$newdate <- as.Date(DF_wellness$newdate, "%Y-%m-%d")
@@ -63,6 +64,9 @@ catdata$Date <- as.Date(catdata$Date, format ="%m/%d/%y")
 catdata$Duration_minutes <- 60 * 24 * as.numeric(times(catdata$Duration))
 catdata$Player_Load_minute <- catdata$Player.Load/catdata$Duration_minutes
 catdata$Meters_minute <- catdata$Odometer/catdata$Duration_minutes
+catdata <- transform(catdata, id=match(Player.Name, unique(Player.Name)))
+  catdata$id <- paste("Player", catdata$id, sep = "_")
+
 
  Catapult_daily <-
   catdata %>%
@@ -294,6 +298,75 @@ renderPrint({
 </div>
 
 
+Coaches Report
+===================
+
+Column {.tabset}
+-------------------
+
+###Player Report
+```{r,echo=FALSE}
+renderPlot({
+
+ggplot(data=subset(catdata, Position %in% c("F", "M", "D") & Date >= max(Date) & Period.Number > 0), aes(reorder(Period.Name, Period.Number), Player.Load, fill=Meters_minute))+geom_bar(stat="identity")+facet_wrap(~id)+geom_text(aes(y=5,label=Period.Name), angle=90, hjust=-.1, size=3)+theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+scale_fill_gradient2(low="yellow", mid="green", high="red")
+})
+```
+
+
+###ACR Table
+
+```{r, echo=FALSE}
+renderDataTable({
+  Catapult_sessions <- catdata %>% filter(Period.Number < 1)
+  
+  Catapult_sessions2 <- Catapult_sessions %>% filter(id %in% c("Player_1", "Player_10", "Player_11", "Player_13", "Player_14", "Player_15", "Player_16", "Player_17", "Player_18", "Player_19", "Player_2", "Player_20", "Player_27", "Player_4", "Player_5", "Player_6", "Player_8", "Player_9")) 
+  Catapult_sessions2 <- Catapult_sessions2[order(Catapult_sessions2$id, Catapult_sessions2$Date),] 
+
+Name <- Catapult_sessions2$id
+
+ts <- seq(ymd("2017-05-15"), ymd(Sys.Date()), by="day")
+df <- expand.grid(Date = ts, Player.Name = Name)
+
+Test <- full_join(Catapult_sessions2, df, by = c("Date" = "Date" , "id" = "Player.Name")) %>% select(Date, id, Player.Load, Odometer) %>% group_by(id, Date) %>% summarize_all(max)
+Test<- Test %>% select(Date, id, Player.Load, Odometer) 
+###Make the data set smaller so you only have the variables of interest
+Test <- Test %>% filter(Date <= "2017-10-12")
+Test[is.na(Test)] <-0
+Test <- Test %>% group_by(id) %>% mutate('Chronic' = rollmean(Player.Load, 28, align="right", na.pad=TRUE, na.rm=TRUE))
+###Calculate the rolling 28 chronic load
+Test <- Test %>% group_by(id) %>% mutate('Acute' = rollmean(Player.Load, 7, align="right", na.pad=TRUE, na.rm=TRUE))
+###Calculate the rolling 7 day acute load
+Test <- Test %>% group_by(id) %>% mutate(Chronic_weighted = Player.Load *0.07 + (1-0.07) * lag(Chronic),
+                                                                     Acute_weighted = Player.Load * 0.25 + (1-0.25)* lag(Acute))
+###Calculate the weighted load
+Test$ACR_weighted <- Test$Acute_weighted/ Test$Chronic_weighted
+
+x<- 10*(-10:200)
+Load_max <- function(x,y,b)  ((x*0.25 + y*0.75) / (x*0.07 + b*0.93)-1.3)
+Load_min <- function(x,y,b)  ((x*0.25 + y*0.75) / (x*0.07 + b*0.93)-0.8)
+
+ACWR_Solver <- Test %>% 
+  filter(Date >= max(Test$Date)) %>% 
+  group_by(id, Date) %>% 
+  mutate(Max_Load = min(x[which(Load_max(x,Acute,Chronic) >= 0)]), Min_Load = max(x[which(Load_min(x,Acute,Chronic) <= 0 & Load_min(x,Acute,Chronic) > - 0.1) ]))
+round_df <- function(df, digits) {
+  nums <- vapply(df, is.numeric, FUN.VALUE = logical(1))
+  
+  df[,nums] <- round(df[,nums], digits = digits)
+  
+  (df)
+}
+
+ACWR_Solver <- round_df(ACWR_Solver, 2)
+datatable(ACWR_Solver,extensions= c('Scroller', 'FixedColumns'), options = list(
+scrollY = 500, paging = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns= 1)), rownames = FALSE, filter = "top")%>%  formatStyle('Player.Load', background =  styleColorBar(range(ACWR_Solver$Player.Load) , 'lightblue'),  backgroundSize = '95% 50%', backgroundRepeat = 'no-repeat',
+backgroundPosition = 'center') %>%  formatStyle('Odometer', background =  styleColorBar(range(ACWR_Solver$Odometer), 'lightblue'),  backgroundSize = '95% 50%', backgroundRepeat = 'no-repeat',
+backgroundPosition = 'center') %>%  formatStyle('ACR_weighted', 'ACR_weighted', backgroundColor = styleInterval(c(0.8,1.3), c('yellow', 'green', 'red')))
+})
+
+```
 
 
 Daily and Running Totals {data-navmenu="Monitoring"}
