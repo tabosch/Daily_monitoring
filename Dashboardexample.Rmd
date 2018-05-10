@@ -29,23 +29,19 @@ library(tibble)
 library(zoo)
 
 DF_wellness <- read.csv("wellness_deidentified.csv")
-DF_wellness$newdate <- as.Date(DF_wellness$newdate, "%Y-%m-%d")
-DF_wellness$day <- weekdays(DF_wellness$newdate)
+DF_wellness$newdate <- ymd(DF_wellness$newdate)
+DF_wellness$day <- ?lubridate::wday(DF_wellness$newdate, label = TRUE, abbr = TRUE)
+
 DF_wellness_daily <- DF_wellness %>% filter(newdate >= max(DF_wellness$newdate))
 DF_wellness_daily$id <- ordered(DF_wellness_daily$id, levels = rev(sort(unique(DF_wellness_daily$id))))
 DF_wellness_daily$Name <- DF_wellness_daily$id
+
 Name <- DF_wellness_daily$id
 Weigh_in_check <- data.frame(Name)
 Weigh_in_check <- setDF(setDT(Weigh_in_check)[setDT(DF_wellness_daily), Wellness_Total := Wellness_Total, on=c("Name")])
 Weigh_in_check$Weighed_in <- ifelse(is.na(Weigh_in_check$Wellness_Total), "no", "yes")
 
-VB_D_RPE <- DF_wellness[,c("newdate","id", "RPE", "Cog_RPE", "B_RPE", "M_RPE")]
-VB_D_RPE$Cog_RPE <- as.numeric(as.character(VB_D_RPE$Cog_RPE))
-VB_D_RPE$B_RPE <- as.numeric(as.character(VB_D_RPE$B_RPE))
-VB_D_RPE$M_RPE <- as.numeric(as.character(VB_D_RPE$M_RPE))
-VB_D_RPE$day <- weekdays(ymd(VB_D_RPE$newdate))
-VB_D_RPE$day <- as.factor(VB_D_RPE$day)
-VB_D_RPE$day <- factor(VB_D_RPE$day, c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+VB_D_RPE <- DF_wellness[,c("newdate","id", "day", "RPE", "Cog_RPE", "B_RPE", "M_RPE")]
 VB_D_RPE_update <- na.omit(VB_D_RPE)
 
 VB_D_RPE_update$Cog_RPE_S <- ave(VB_D_RPE_update$Cog_RPE, VB_D_RPE_update$id, VB_D_RPE_update$day, FUN=scale)
