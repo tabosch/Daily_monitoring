@@ -120,18 +120,15 @@ Row (data-width = 1500)
 
 ###  Has not filled out Wellness {data-height=600}
 
-<style>
-div.yellow pre {background-color:yellow; }
-div.yellow pre.r {background-color:yellow; }
-</style>
-
-<div class = "yellow">
 ```{r, echo=FALSE}
-renderPrint({
-  print(Weigh_in_check$Name[Weigh_in_check$Weighed_in=="no"], max.levels=0)
-})
+renderDataTable(
+  datatable(data.frame(names = Weigh_in_check$Name[Weigh_in_check$Weighed_in == "no"]), 
+            options = list(dom = 't'), 
+            rownames= FALSE, 
+            colnames = NULL) %>% 
+    formatStyle("names",backgroundColor="yellow")
+)
 ```
-</div>
 
 Row {.tabset}
 ----------------------------
