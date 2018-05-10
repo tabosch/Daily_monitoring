@@ -950,7 +950,7 @@ Column {.sidebar}
 
 selectInput("Club3", "Club", choices = Passing2$Club, selected= Passing2$Club[[220]] , multiple = TRUE)
 
-sliderInput("pass2", "Passes", 0, 1000, 100, step = 100)
+sliderInput("pass2", "Passes", 0, 1000, 100, step = 25)
 
 ```
 
@@ -966,7 +966,7 @@ filter_pass <-
     filter(Club %in% input$Club3,
            All_Passes > input$pass2)
  
-  ggplot(filter_pass, aes(All_Passes, All_PassPct*100, colour=All_diffPct, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 1.0)+geom_text(aes(label=Player), vjust = -1 )+geom_text(aes(label=All_PassPct*100), vjust=2)+theme_dark()+xlab("# of Passes in Attacking Third")+ylab("Expected Passing Percentage in Attacking Third")
+  ggplot(filter_pass, aes(All_Passes, All_PassPct*100, colour=All_diffPct, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 1.0)+geom_text(aes(label=Player), vjust = -1 )+geom_text(aes(label=round(All_PassPct*100,1)), vjust=2)+theme_dark()+xlab("# of Passes in Attacking Third")+ylab("Expected Passing Percentage in Attacking Third")+xlim(0, 750)
 })
 ```
 
@@ -980,7 +980,7 @@ filter_pass <-
     filter(Club %in% input$Club3,
            ATT_Passes > input$pass2)
  
-  ggplot(filter_pass, aes(ATT_Passes, ATT_xPassPct, colour=ATT_diffPct, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 1.0)+geom_text(aes(label=Player), vjust = -1 )+geom_text(aes(label=ATT_PassPct), vjust=2)+theme_dark()+xlab("# of Passes in Attacking Third")+ylab("Expected Passing Percentage in Attacking Third")
+  ggplot(filter_pass, aes(ATT_Passes, ATT_xPassPct, colour=ATT_diffPct, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 1.0)+geom_text(aes(label=Player), vjust = -1 )+geom_text(aes(label=round(ATT_PassPct*100,1)), vjust=2)+theme_dark()+xlab("# of Passes in Attacking Third")+ylab("Expected Passing Percentage in Attacking Third")+xlim(0, 200)
 })
 ```
 
@@ -995,7 +995,7 @@ filter_pass_mid <-
     filter(Club %in% input$Club3,
            Mid_Passes > input$pass2)
  
-  ggplot(filter_pass_mid, aes(Mid_Passes, Mid_xPassPct, colour=Mid_diffPct, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 1.0)+geom_text(aes(label=Player), vjust = -1 )+geom_text(aes(label=Mid_PassPct), vjust=2)+theme_dark()+xlab("# of Passes in Middle Third")+ylab("Expected Passing Percentage in Middle Third")
+  ggplot(filter_pass_mid, aes(Mid_Passes, Mid_xPassPct, colour=Mid_diffPct, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 1.0)+geom_text(aes(label=Player), vjust = -1 )+geom_text(aes(label=round(Mid_PassPct*100,1)), vjust=2)+theme_dark()+xlab("# of Passes in Middle Third")+ylab("Expected Passing Percentage in Middle Third")+xlim(0,200)
 })
 ```
 
@@ -1009,7 +1009,7 @@ filter_pass_def <-
     filter(Club %in% input$Club3,
            DEF_Passes > input$pass2)
  
-  ggplot(filter_pass_def, aes(DEF_Passes, DEF_xPassPct, colour=DEF_diffPct, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 0.0)+geom_text(aes(label=Player), vjust = -1 )+geom_text(aes(label=DEF_PassPct), vjust=2)+theme_dark()+xlab("# of Passes in Defensive Third")+ylab("Expected Passing Percentage in Defensive Third")
+  ggplot(filter_pass_def, aes(DEF_Passes, DEF_xPassPct, colour=DEF_diffPct, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 0.0)+geom_text(aes(label=Player), vjust = -1 )+geom_text(aes(label=round(DEF_PassPct*100,1)), vjust=2)+theme_dark()+xlab("# of Passes in Defensive Third")+ylab("Expected Passing Percentage in Defensive Third")+xlim(0, 400)
 })
 ```
 
@@ -1023,10 +1023,10 @@ renderPlot({
     Passing2 %>%
     filter(Club %in% input$Club3)
   
- dist <- ggplot(filter_clubs, aes(All_Distance, fill=Club))+geom_density(stat="density", alpha= 0.5)
- vert <- ggplot(filter_clubs, aes(All_Vertical, fill=Club))+geom_density(stat="density", alpha= 0.5)
- diff <- ggplot(filter_clubs, aes(All_diffPct, fill=Club))+geom_density(stat="density", alpha= 0.5)
- score <- ggplot(filter_clubs, aes(All_Score, fill=Club))+geom_density(stat="density", alpha= 0.5)
+ dist <- ggplot(filter_clubs, aes(All_Distance, fill=Club))+geom_density(stat="density", alpha= 0.5)+xlab("Avg Pass Distance (All Passes)")
+ vert <- ggplot(filter_clubs, aes(All_Vertical, fill=Club))+geom_density(stat="density", alpha= 0.5)+xlab("Avg Pass Vertical Distance (All Passes)")
+ diff <- ggplot(filter_clubs, aes(All_diffPct, fill=Club))+geom_density(stat="density", alpha= 0.5)+xlab("Difference between Pass Efficiency and Expected Pass Efficiency")
+ score <- ggplot(filter_clubs, aes(All_Score, fill=Club))+geom_density(stat="density", alpha= 0.5)+xlab("Extra Completed Passes")
   gridExtra::grid.arrange(dist,vert,diff,score, ncol=2)
 })
 
