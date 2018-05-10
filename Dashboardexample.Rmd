@@ -109,6 +109,10 @@ Soccer_data <- Soccer_data[,c(2:26)]
 Passing <- read.csv("passing_data_final_reg_season.csv")
 
  ACWR_Solver <- read.csv("ACWR_Solver.csv")
+ 
+ 
+Passing2 <- read.csv("Passing_2018.csv") 
+colnames(Passing2)[5] <- "Club"
 ```
 
 Team Daily Overview {data-navmenu="Wellness"}
@@ -329,6 +333,43 @@ renderDataTable({
 })
 
 ```
+
+###Days Since Max Velocity
+```{r,echo=FALSE}
+renderDataTable({
+  SeasonData <- catdata
+SeasonData2 <- SeasonData %>% filter(Period.Number < 1)
+SpeedData <- SeasonData2 %>% select (id, Date, Week, Max.Velocity, Velocity.Band.5.TotEff, Velocity.Band.6.TotEff)
+SpeedData <- SpeedData %>% group_by(id) %>% mutate(PercentOfMax = round(Max.Velocity/max(Max.Velocity)*100,1))
+SpeedData <- SpeedData %>% group_by(id) %>% mutate(DateofLastMax90 = max(Date[which(PercentOfMax>90)]),
+                                                   DateofLastMax80 = max(Date[which(PercentOfMax>80)]),
+                                                   DateOfLast80Effort = max(Date[which(Velocity.Band.5.TotEff >0)]),
+                                                   DateOfLast90Effort = max(Date[which(Velocity.Band.6.TotEff >0)]))
+
+SpeedData_New <- SpeedData %>% filter(Date >= max(Date))
+SpeedData_New$DaysSinceMax90 <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
+  as.Date(as.character(SpeedData_New$DateofLastMax90), format="%Y-%m-%d")
+SpeedData_New$DaysSince90Effort <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
+  as.Date(as.character(SpeedData_New$DateOfLast90Effort), format="%Y-%m-%d")
+SpeedData_New$DaysSinceMax80 <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
+  as.Date(as.character(SpeedData_New$DateofLastMax80), format="%Y-%m-%d")
+SpeedData_New$DaysSince80Effort <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
+  as.Date(as.character(SpeedData_New$DateOfLast80Effort), format="%Y-%m-%d")
+SpeedData_table <- SpeedData_New %>% filter(Date >="2017-10-12") %>% select(id, Date, Max.Velocity, DaysSinceMax90, DaysSince90Effort, DaysSinceMax80, DaysSince80Effort)
+SpeedData_table$Max.Velocity <- round(SpeedData_table$Max.Velocity, 2)
+datatable(SpeedData_table, extensions= c('Scroller', 'FixedColumns'), options = list(scrollY = 400, paging = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns= 4))
+) %>%  formatStyle('id', 'DaysSinceMax90', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))) %>%  formatStyle('DaysSinceMax90', 'DaysSinceMax90', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))
+) %>%  formatStyle('DaysSinceMax80', 'DaysSinceMax80', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))
+) %>%  formatStyle('Max.Velocity', background =  styleColorBar(range(SpeedData_table$Max.Velocity), 'lightblue')) 
+
+
+
+
+  
+})
+
+```
+
 
 Player Report
 ====================
@@ -895,4 +936,98 @@ filter_pass_def <-
  
   ggplot(filter_pass_def, aes(DEF_3rd_Passes, DEF_3rd_xPRCT, colour=DEF_3rd_PRCT_diff, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 0.0)+geom_text(aes(label=Name), vjust = -1 )+geom_text(aes(label=DEF_3rd_PRCT), vjust=2)+theme_dark()+xlab("# of Passes in Defensive Third")+ylab("Expected Passing Percentage in Defensive Third")
 })
+```
+
+2018 Passing {data-navmenu="Player Analytics"}
+=======================================================
+
+Column {.sidebar}
+----------------------
+
+### Filter Data
+
+```{r, echo=FALSE, fig.width = 5}
+
+selectInput("Club3", "Club", choices = Passing2$Club, selected= Passing2$Club[[220]] , multiple = TRUE)
+
+sliderInput("pass2", "Passes", 0, 1000, 100, step = 100)
+
+```
+
+Column {.tabset}
+--------------------
+
+###All
+```{r, echo=FALSE}
+renderPlot({
+  Passing2$All_diffPct <- Passing2$All_PassPct*100 - Passing2$All_xPassPct*100
+filter_pass <-
+    Passing2 %>%
+    filter(Club %in% input$Club3,
+           All_Passes > input$pass2)
+ 
+  ggplot(filter_pass, aes(All_Passes, All_PassPct*100, colour=All_diffPct, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 1.0)+geom_text(aes(label=Player), vjust = -1 )+geom_text(aes(label=All_PassPct*100), vjust=2)+theme_dark()+xlab("# of Passes in Attacking Third")+ylab("Expected Passing Percentage in Attacking Third")
+})
+```
+
+###Attacking 3rd
+
+```{r, echo=FALSE}
+renderPlot({
+  Passing2$ATT_diffPct <- Passing2$ATT_PassPct*100 - Passing2$ATT_xPassPct*100
+filter_pass <-
+    Passing2 %>%
+    filter(Club %in% input$Club3,
+           ATT_Passes > input$pass2)
+ 
+  ggplot(filter_pass, aes(ATT_Passes, ATT_xPassPct, colour=ATT_diffPct, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 1.0)+geom_text(aes(label=Player), vjust = -1 )+geom_text(aes(label=ATT_PassPct), vjust=2)+theme_dark()+xlab("# of Passes in Attacking Third")+ylab("Expected Passing Percentage in Attacking Third")
+})
+```
+
+
+###Middle 3rd
+
+```{r, echo=FALSE}
+renderPlot({
+  Passing2$Mid_diffPct <- Passing2$Mid_PassPct*100 - Passing2$Mid_xPassPct*100
+filter_pass_mid <-
+    Passing2 %>%
+    filter(Club %in% input$Club3,
+           Mid_Passes > input$pass2)
+ 
+  ggplot(filter_pass_mid, aes(Mid_Passes, Mid_xPassPct, colour=Mid_diffPct, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 1.0)+geom_text(aes(label=Player), vjust = -1 )+geom_text(aes(label=Mid_PassPct), vjust=2)+theme_dark()+xlab("# of Passes in Middle Third")+ylab("Expected Passing Percentage in Middle Third")
+})
+```
+
+###Defensive 3rd
+
+```{r, echo=FALSE}
+renderPlot({
+  Passing2$DEF_diffPct <- Passing2$DEF_PassPct*100 - Passing2$DEF_xPassPct*100
+filter_pass_def <-
+    Passing2 %>%
+    filter(Club %in% input$Club3,
+           DEF_Passes > input$pass2)
+ 
+  ggplot(filter_pass_def, aes(DEF_Passes, DEF_xPassPct, colour=DEF_diffPct, shape=Club))+geom_point(size=4)+scale_color_gradient2(name="Percent diff \nin passing accuracy", low="red", mid="yellow", high="green", midpoint= 0.0)+geom_text(aes(label=Player), vjust = -1 )+geom_text(aes(label=DEF_PassPct), vjust=2)+theme_dark()+xlab("# of Passes in Defensive Third")+ylab("Expected Passing Percentage in Defensive Third")
+})
+```
+
+
+###Team Comparison
+
+```{r,echo=FALSE}
+renderPlot({
+  Passing2$All_diffPct <- Passing2$All_PassPct*100 - Passing2$All_xPassPct*100
+  filter_clubs <-
+    Passing2 %>%
+    filter(Club %in% input$Club3)
+  
+ dist <- ggplot(filter_clubs, aes(All_Distance, fill=Club))+geom_density(stat="density", alpha= 0.5)
+ vert <- ggplot(filter_clubs, aes(All_Vertical, fill=Club))+geom_density(stat="density", alpha= 0.5)
+ diff <- ggplot(filter_clubs, aes(All_diffPct, fill=Club))+geom_density(stat="density", alpha= 0.5)
+ score <- ggplot(filter_clubs, aes(All_Score, fill=Club))+geom_density(stat="density", alpha= 0.5)
+  gridExtra::grid.arrange(dist,vert,diff,score, ncol=2)
+})
+
 ```
