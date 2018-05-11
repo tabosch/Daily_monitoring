@@ -144,7 +144,7 @@ Row {.tabset}
 
 ###Wellness 
 
-```{r, echo=FALSE, fig.height=20, fig.width=40}
+```{r, echo=FALSE}
 renderPlot({
   daily_data <- DF_wellness_daily
   # Set ordering by daily Well_S
@@ -157,7 +157,7 @@ renderPlot({
     scale_fill_gradient2(name="Wellness", low='red', mid= "yellow", high='green', midpoint=0, guide = FALSE) +
     scale_x_discrete(name="") + 
     theme_minimal() +
-    theme(axis.text.x= element_text(angle=90, size=12)) +
+    theme(axis.text.x= element_text(angle=90)) +
     ggtitle("Daily Wellness") +
     ylab("Scaled Wellness < 0 is below their average") + 
     coord_flip() 
@@ -170,15 +170,16 @@ renderPlot({
     geom_line() + 
     scale_colour_gradient(low="red", high="green", guide = FALSE) +
     geom_hline(yintercept= 0, lty=3) +
-    facet_grid(Name ~., switch = "y", scale="free_y") +
+    facet_grid(Name ~., switch = "y") +
     scale_x_date(date_breaks = "1 day", date_labels =  "%a") +
     theme(axis.title=element_blank(), 
           axis.ticks.y = element_blank(),
           axis.text.y = element_blank(),
-#          plot.title = element_text(size = rel(1), colour = 'grey10'),
           panel.background = element_rect(fill = 'white'),
           strip.background = element_blank(),
-          strip.text.y = element_text(angle = 180)) + 
+          strip.text.y = element_text(angle = 180),
+          panel.spacing = unit(0.9, "null"),
+          plot.margin = unit(c(0.90,0.5,0.90,0.5), "cm")) + 
     ggtitle("Weekly Wellness") +
     ylab("black = average, red = very low")
 
