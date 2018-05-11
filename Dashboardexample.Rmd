@@ -111,7 +111,7 @@ Passing2 <- read.csv("Passing_2018.csv")
 colnames(Passing2)[5] <- "Club"
 ```
 
-Team Daily Overview {data-navmenu="Wellness"}
+Wellness
 ================================================
 
 
