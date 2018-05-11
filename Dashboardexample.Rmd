@@ -129,15 +129,14 @@ renderGauge({
 
 ###  Has not filled out Wellness {data-height=600}
 
+<div style = "color: #f6d40a">
 ```{r, echo=FALSE}
-renderDataTable(
-  datatable(data.frame(names = compliance$Name[compliance$Screened == FALSE]), 
-            options = list(dom = 't'), 
-            rownames= FALSE, 
-            colnames = NULL) %>% 
-    formatStyle("names",backgroundColor="yellow")
-)
+renderUI({
+  names <- compliance$Name[compliance$Screened == FALSE]
+  HTML(paste(names, collapse = "<br />"))
+})
 ```
+</div>
 
 Row {.tabset}
 ----------------------------
@@ -249,64 +248,56 @@ Column (data-width=200)
 Alerts
 
 ### Sleep Quality < -1.0 {data-height=200}
-
+<div style = "color: #f02c2c">
 ```{r, echo=FALSE}
-renderDataTable(
-  datatable(data.frame(names = DF_wellness_daily$Name[DF_wellness_daily$SQ_S < -1.0 ]), 
-            options = list(dom = 't',scrollY = "50px"), 
-            rownames= FALSE, 
-            colnames = NULL) %>% 
-    formatStyle("names",backgroundColor="red")
-)
+renderUI({
+  names <- DF_wellness_daily$Name[DF_wellness_daily$SQ_S < -1.0 ]
+  HTML(paste(names, collapse = "<br />"))
+})
 ```
+</div>
 
 ### Sleep Length < -1.0 {data-height=200}
-
+<div style = "color: #f02c2c">
 ```{r, echo=FALSE}
-renderDataTable(
-  datatable(data.frame(names = DF_wellness_daily$Name[DF_wellness_daily$SL_S < -1.0 ]), 
-            options = list(dom = 't',scrollY = "50px"),
-            rownames= FALSE, 
-            colnames = NULL) %>% 
-    formatStyle("names",backgroundColor="red")
-)
+renderUI({
+  names <- DF_wellness_daily$Name[DF_wellness_daily$SL_S < -1.0 ]
+  HTML(paste(names, collapse = "<br />"))
+})
 ```
+</div>
 
 ### RPE < -1.0 {data-height=200}
-
+<div style = "color: #f02c2c">
 ```{r, echo=FALSE}
-renderDataTable(
-  datatable(data.frame(names = DF_wellness_daily$Name[DF_wellness_daily$RPE_S < -1.0 ]), 
-options = list(dom = 't',scrollY = "50px"),
-            rownames= FALSE, 
-            colnames = NULL) %>% 
-    formatStyle("names",backgroundColor="red")
-)
+renderUI({
+  names <- DF_wellness_daily$Name[DF_wellness_daily$RPE_S < -1.0 ]
+  HTML(paste(names, collapse = "<br />"))
+})
 ```
+</div>
 
 ### Soreness < -1.0 {data-height=200}
 
+<div style = "color: #f02c2c">
 ```{r, echo=FALSE}
-renderDataTable(
-  datatable(data.frame(names = DF_wellness_daily$Name[DF_wellness_daily$Sore_S < -1.0 ]), 
-            options = list(dom = 't',scrollY = "50px"), 
-            rownames= FALSE, 
-            colnames = NULL) %>% 
-    formatStyle("names",backgroundColor="red")
-)
+renderUI({
+  names <- DF_wellness_daily$Name[DF_wellness_daily$Sore_S < -1.0 ]
+  HTML(paste(names, collapse = "<br />"))
+})
 ```
+</div>
 
 ### Stress < -1.0 {data-height=200}
 
+<div style = "color: #f02c2c">
 ```{r, echo=FALSE}
-renderDataTable(
-  datatable(data.frame(names = DF_wellness_daily$Name[DF_wellness_daily$Stress_S < -1.0 ]), 
-            options = list(dom = 't',scrollY = "50px"), 
-            rownames= FALSE, 
-            colnames = NULL) %>% 
-    formatStyle("names",backgroundColor="red")
-)
+renderUI({
+  names <- DF_wellness_daily$Name[DF_wellness_daily$Stress_S < -1.0 ]
+  HTML(paste(names, collapse = "<br />"))
+})
 ```
+</div>
 
 
 Coaches Report
