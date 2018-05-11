@@ -146,31 +146,43 @@ Row {.tabset}
 
 ```{r, echo=FALSE, fig.height=20, fig.width=40}
 renderPlot({
+  daily_data <- DF_wellness_daily
+  # Set ordering by daily Well_S
+  daily_data$Name <- reorder(daily_data$Name, -daily_data$Well_S)
+  Daily <- ggplot(daily_data, aes(Name, Well_S, fill=Well_S)) +
+    geom_bar(stat="identity") + 
+    geom_rect(aes(ymin = -Inf, ymax = -2.5, xmin = -Inf, xmax = Inf), fill = "pink", alpha = 0.01) +
+    geom_rect(aes(ymin = -2.5, ymax = 0, xmin = -Inf, xmax = Inf), fill = "yellow", alpha = 0.01) +
+    geom_rect(aes(ymin = 0, ymax = Inf, xmin = -Inf, xmax = Inf), fill = "green", alpha = 0.01) +
+    scale_fill_gradient2(name="Wellness", low='red', mid= "yellow", high='green', midpoint=0, guide = FALSE) +
+    scale_x_discrete(name="") + 
+    theme_minimal() +
+    theme(axis.text.x= element_text(angle=90, size=12)) +
+    ggtitle("Daily Wellness") +
+    ylab("Scaled Wellness < 0 is below their average") + 
+    coord_flip() 
   
-  Daily <- ggplot(DF_wellness_daily, aes(reorder(Name, Name), Well_S, fill=Well_S))+
-  geom_bar(stat="identity")+theme(axis.text.x= element_text(angle=90, size=12))+
-  scale_fill_gradient2(name="Wellness", low='red', mid= "yellow", high='green', midpoint=0)+
-  scale_x_discrete(name="")+ylab("Scaled Wellness < 0 is below their average")+coord_flip()+
-  geom_hline(VB, yintercept = -1, colour = "yellow", lty=2, size=1)+
-  geom_hline(VB, yintercept = -2.5, colour = "red", lty=3, size=2)+ggtitle(DF_wellness_daily$Date)
+  weekly_data <- subset(DF_wellness, Date >= max(DF_wellness$Date) - days(7))
+  # Specify ordering so same as partner daily graph
+  weekly_data$Name <- factor(weekly_data$Name, levels = rev(levels(daily_data$Name)))
+  Weekly <- ggplot(weekly_data, aes(Date, Well_S, colour=Well_S)) +
+    geom_point(size=2) + 
+    geom_line() + 
+    scale_colour_gradient(low="red", high="green", guide = FALSE) +
+    geom_hline(yintercept= 0, lty=3) +
+    facet_grid(Name ~., switch = "y", scale="free_y") +
+    scale_x_date(date_breaks = "1 day", date_labels =  "%a") +
+    theme(axis.title=element_blank(), 
+          axis.ticks.y = element_blank(),
+          axis.text.y = element_blank(),
+#          plot.title = element_text(size = rel(1), colour = 'grey10'),
+          panel.background = element_rect(fill = 'white'),
+          strip.background = element_blank(),
+          strip.text.y = element_text(angle = 180)) + 
+    ggtitle("Weekly Wellness") +
+    ylab("black = average, red = very low")
 
-
-
-Weekly <- ggplot(data=subset(DF_wellness, Date >= max(DF_wellness$Date) - days(7)), aes(Date, Well_S, colour=Well_S))+
-  geom_point(size=2)+geom_line()+scale_colour_gradient(low="red", high="green")+
-  geom_hline(yintercept= -2, colour="red", lty=2)+geom_hline(yintercept= 0, lty=3)+
-  facet_grid(Name~., switch = "y", scale="free_y")+
-  theme(axis.title=element_blank(), axis.text.y = element_blank(), axis.text.x = element_blank(), axis.ticks =
-          element_blank(),
-        plot.title = element_text(size = rel(1), colour = 'grey10'),
-        panel.background = element_rect(fill = 'white'),
-        strip.background = element_blank(),
-        panel.spacing = unit(0.9, "null"),strip.text.y = element_text(angle = 180),
-        plot.margin = unit(c(0.90,0.5,0.90,0.5), "cm"))+ggtitle("Weekly Wellness (black = average, red = very low)")
-                                                                                                                                                                                                                                                                                                                     
-
-grid.arrange(Daily, Weekly, ncol=2)
-
+  grid.arrange(Daily, Weekly, ncol=2)
 })
 ```
 
