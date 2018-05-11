@@ -29,10 +29,10 @@ library(tibble)
 library(zoo)
 
 DF_wellness <- read.csv("wellness_deidentified.csv")
-DF_wellness$newdate <- ymd(DF_wellness$newdate)
-DF_wellness$day <- lubridate::wday(DF_wellness$newdate, label = TRUE, abbr = TRUE)
+DF_wellness$Date <- ymd(DF_wellness$newdate)
+DF_wellness$day <- lubridate::wday(DF_wellness$Date, label = TRUE, abbr = TRUE)
 
-DF_wellness_daily <- DF_wellness %>% filter(newdate >= max(DF_wellness$newdate))
+DF_wellness_daily <- DF_wellness %>% filter(Date >= max(DF_wellness$Date))
 DF_wellness_daily$id <- ordered(DF_wellness_daily$id, levels = rev(sort(unique(DF_wellness_daily$id))))
 DF_wellness_daily$Name <- DF_wellness_daily$id
 
@@ -41,7 +41,7 @@ Weigh_in_check <- data.frame(Name)
 Weigh_in_check <- setDF(setDT(Weigh_in_check)[setDT(DF_wellness_daily), Wellness_Total := Wellness_Total, on=c("Name")])
 Weigh_in_check$Weighed_in <- ifelse(is.na(Weigh_in_check$Wellness_Total), "no", "yes")
 
-VB_D_RPE <- DF_wellness[,c("newdate","id", "day", "RPE", "Cog_RPE", "B_RPE", "M_RPE")]
+VB_D_RPE <- DF_wellness[,c("Date","id", "day", "RPE", "Cog_RPE", "B_RPE", "M_RPE")]
 VB_D_RPE_update <- na.omit(VB_D_RPE)
 
 VB_D_RPE_update$Cog_RPE_S <- ave(VB_D_RPE_update$Cog_RPE, VB_D_RPE_update$id, VB_D_RPE_update$day, FUN=scale)
@@ -49,7 +49,7 @@ VB_D_RPE_update$B_RPE_S <- ave(VB_D_RPE_update$B_RPE, VB_D_RPE_update$id, VB_D_R
 VB_D_RPE_update$M_RPE_S <- ave(VB_D_RPE_update$M_RPE, VB_D_RPE_update$id, VB_D_RPE_update$day, FUN=scale)
 VB_D_RPE_2 <-
   VB_D_RPE %>%
-  filter(newdate==max(newdate))
+  filter(Date==max(Date))
 
 catdata <- read.csv("catdata.csv")
 catdata$Date <- as.Date(catdata$Date, format ="%m/%d/%y")
@@ -154,11 +154,11 @@ renderPlot({
   scale_fill_gradient2(name="Wellness", low='red', mid= "yellow", high='green', midpoint=0)+
   scale_x_discrete(name="")+ylab("Scaled Wellness < 0 is below their average")+coord_flip()+
   geom_hline(VB, yintercept = -1, colour = "yellow", lty=2, size=1)+
-  geom_hline(VB, yintercept = -2.5, colour = "red", lty=3, size=2)+ggtitle(DF_wellness_daily$newdate)
+  geom_hline(VB, yintercept = -2.5, colour = "red", lty=3, size=2)+ggtitle(DF_wellness_daily$Date)
 
 
 
-Weekly <- ggplot(data=subset(DF_wellness, newdate >= max(DF_wellness$newdate) - days(7)), aes(newdate, Well_S, colour=Well_S))+
+Weekly <- ggplot(data=subset(DF_wellness, Date >= max(DF_wellness$Date) - days(7)), aes(Date, Well_S, colour=Well_S))+
   geom_point(size=2)+geom_line()+scale_colour_gradient(low="red", high="green")+
   geom_hline(yintercept= -2, colour="red", lty=2)+geom_hline(yintercept= 0, lty=3)+
   facet_grid(id~., switch = "y", scale="free_y")+
@@ -183,20 +183,20 @@ DF_wellness$Wellness_marker <- ifelse(DF_wellness$Wellness_Total_Scale > 1, 24, 
 DF_wellness$Wellness_marker_color <- ifelse(DF_wellness$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness$Wellness_Total_Scale < -1.5, "red", "yellow"))
 DF_wellness_day <- 
   DF_wellness %>%
-  group_by(newdate) %>%
+  group_by(Date) %>%
   summarize(Wellness_Total_Scale = mean(Wellness_Total_Scale, na.rm=T))
 DF_wellness_day$Wellness_marker_color <- ifelse(DF_wellness_day$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness_day$Wellness_Total_Scale < -1.5, "red", "yellow"))
 renderPlot({
   
-DF_wellness$day <- weekdays(DF_wellness$newdate)
+DF_wellness$day <- weekdays(DF_wellness$Date)
 DF_wellness$Wellness_marker <- ifelse(DF_wellness$Wellness_Total_Scale > 1, 24, ifelse(DF_wellness$Wellness_Total_Scale < -1.5, 25, 21))
 DF_wellness$Wellness_marker_color <- ifelse(DF_wellness$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness$Wellness_Total_Scale < -1.5, "red", "yellow"))
 DF_wellness_day <- 
   DF_wellness %>%
-  group_by(newdate) %>%
+  group_by(Date) %>%
   summarize(Wellness_Total_Scale = mean(Wellness_Total_Scale, na.rm=T))
 DF_wellness_day$Wellness_marker_color <- ifelse(DF_wellness_day$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness_day$Wellness_Total_Scale < -1.5, "red", "yellow"))
-ggplot(data=subset(DF_wellness, newdate >= max(DF_wellness$newdate) - days(21)), aes(newdate, Wellness_Total_Scale))+geom_bar(data=subset(DF_wellness_day, newdate >= max(DF_wellness$newdate) - days(21)), aes(fill= Wellness_marker_color), stat="summary", fun.y="mean")+geom_point(aes(shape=Wellness_marker, fill= Wellness_marker_color), stat="identity", size = 3)+scale_shape_identity()+scale_fill_identity()+geom_text(data=subset(DF_wellness, newdate >= max(DF_wellness$newdate)- days(21)), aes(newdate, y= 0, label=day), angle=90, vjust=2)+geom_text_repel(data=subset(DF_wellness, newdate >= max(newdate)- days(14) & Wellness_Total_Scale < -2.5), aes(newdate, Wellness_Total_Scale, label=id))+theme(axis.text.x= element_text(angle=90, size=12))
+ggplot(data=subset(DF_wellness, Date >= max(DF_wellness$Date) - days(21)), aes(Date, Wellness_Total_Scale))+geom_bar(data=subset(DF_wellness_day, Date >= max(DF_wellness$Date) - days(21)), aes(fill= Wellness_marker_color), stat="summary", fun.y="mean")+geom_point(aes(shape=Wellness_marker, fill= Wellness_marker_color), stat="identity", size = 3)+scale_shape_identity()+scale_fill_identity()+geom_text(data=subset(DF_wellness, Date >= max(DF_wellness$Date)- days(21)), aes(Date, y= 0, label=day), angle=90, vjust=2)+geom_text_repel(data=subset(DF_wellness, Date >= max(Date)- days(14) & Wellness_Total_Scale < -2.5), aes(Date, Wellness_Total_Scale, label=id))+theme(axis.text.x= element_text(angle=90, size=12))
 
 })
 ```
@@ -206,14 +206,14 @@ ggplot(data=subset(DF_wellness, newdate >= max(DF_wellness$newdate) - days(21)),
 ```{r, echo=FALSE, fig.height=25, fig.width=35}
 VB_D_RPE_2 <-
   VB_D_RPE %>%
-  filter(newdate==max(newdate))
+  filter(Date==max(Date))
 
 VB_D_RPE_2$Date <- format(VB_D_RPE_2$Date, "%a %b %d")
 VB_D_RPE_3 <- VB_D_RPE_2[,c("id", "Cog_RPE", "B_RPE", "M_RPE")]
 VB_D_RPE_melt <- melt(VB_D_RPE_3, id.var = "id")
 VB_D_RPE_melt$value <- as.numeric(as.character(VB_D_RPE_melt$value))
 renderPlot({
-ggplot(VB_D_RPE_melt, aes(reorder(id, value), value, fill=variable))+geom_bar(stat="identity")+scale_y_continuous(breaks = c(0:15), limits = c(0,15), labels= c(0:15))+coord_flip()+ggtitle(max(VB_D_RPE_2$newdate))+xlab("")+ylab("Max is 15, higher equals easier")
+ggplot(VB_D_RPE_melt, aes(reorder(id, value), value, fill=variable))+geom_bar(stat="identity")+scale_y_continuous(breaks = c(0:15), limits = c(0,15), labels= c(0:15))+coord_flip()+ggtitle(max(VB_D_RPE_2$Date))+xlab("")+ylab("Max is 15, higher equals easier")
 })
 ```
 
@@ -221,13 +221,13 @@ ggplot(VB_D_RPE_melt, aes(reorder(id, value), value, fill=variable))+geom_bar(st
 ```{r, echo=FALSE}
 VB4 <-
   DF_wellness %>%
-  filter(newdate==max(newdate))
+  filter(Date==max(Date))
 
-VB4$Date <- format(VB4$newdate, "%a %b %d")
+VB4$Date <- format(VB4$Date, "%a %b %d")
 renderPlot({
 VB5 <-VB4[,c("id", "SL_S", "RPE_S", "Sore_S", "Stress_S", "SQ_S")]
 VB5_melt <- melt(VB5, id.vars = "id")
-ggplot(VB5_melt, aes(reorder(id, value), value, fill=variable))+geom_bar(stat="identity")+coord_flip()+xlab("Athlete")+ylab("Scaled Value for Wellness")+ggtitle(max(VB4$newdate))+geom_hline(yintercept = -2.5, colour="red", lty=2)+geom_hline(yintercept = -1, colour="yellow", lty=1, size = 2)+geom_text(aes(id, value, label=round(value,1)), position=position_stack(vjust=0.5))
+ggplot(VB5_melt, aes(reorder(id, value), value, fill=variable))+geom_bar(stat="identity")+coord_flip()+xlab("Athlete")+ylab("Scaled Value for Wellness")+ggtitle(max(VB4$Date))+geom_hline(yintercept = -2.5, colour="red", lty=2)+geom_hline(yintercept = -1, colour="yellow", lty=1, size = 2)+geom_text(aes(id, value, label=round(value,1)), position=position_stack(vjust=0.5))
 })
 ```
 
