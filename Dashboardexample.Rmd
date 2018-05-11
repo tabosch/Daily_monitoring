@@ -33,7 +33,9 @@ DF_wellness$Date <- ymd(DF_wellness$newdate)
 DF_wellness$day <- lubridate::wday(DF_wellness$Date, label = TRUE, abbr = FALSE)
 DF_wellness$Name <- factor(DF_wellness$id, levels = rev(sort(unique(DF_wellness$id))))
 
-DF_wellness_daily <- DF_wellness %>% filter(Date >= max(DF_wellness$Date))
+wellness_date <- max(DF_wellness$Date)
+
+DF_wellness_daily <- DF_wellness %>% filter(Date >= wellness_date)
 
 compliance <- data.frame(Name = unique(DF_wellness$Name)) %>% 
   merge(DF_wellness_daily %>% select(Name, Wellness_Total), all.x = TRUE) %>% 
@@ -112,9 +114,15 @@ colnames(Passing2)[5] <- "Club"
 Wellness
 ================================================
 
-
 Row (data-width = 1500)
 --------------------------------
+
+###  Date
+
+```{r, fig.height=0.5}
+renderUI({HTML(paste0("<h4>", format(wellness_date, format="%b %d %Y"), "</h4>"))})
+```
+
 
 ### Daily Compliance 
 
@@ -161,7 +169,7 @@ renderPlot({
     ylab("Scaled Wellness < 0 is below their average") + 
     coord_flip() 
   
-  weekly_data <- subset(DF_wellness, Date >= max(DF_wellness$Date) - days(7))
+  weekly_data <- subset(DF_wellness, Date >= wellness_date - days(7))
   # Specify ordering so same as partner daily graph
   weekly_data$Name <- factor(weekly_data$Name, levels = rev(levels(daily_data$Name)))
   Weekly <- ggplot(weekly_data, aes(Date, Well_S, colour=Well_S)) +
@@ -206,7 +214,7 @@ DF_wellness_day <-
   group_by(Date) %>%
   summarize(Wellness_Total_Scale = mean(Wellness_Total_Scale, na.rm=T))
 DF_wellness_day$Wellness_marker_color <- ifelse(DF_wellness_day$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness_day$Wellness_Total_Scale < -1.5, "red", "yellow"))
-ggplot(data=subset(DF_wellness, Date >= max(DF_wellness$Date) - days(21)), aes(Date, Wellness_Total_Scale))+geom_bar(data=subset(DF_wellness_day, Date >= max(DF_wellness$Date) - days(21)), aes(fill= Wellness_marker_color), stat="summary", fun.y="mean")+geom_point(aes(shape=Wellness_marker, fill= Wellness_marker_color), stat="identity", size = 3)+scale_shape_identity()+scale_fill_identity()+geom_text(data=subset(DF_wellness, Date >= max(DF_wellness$Date)- days(21)), aes(Date, y= 0, label=day), angle=90, vjust=2)+geom_text_repel(data=subset(DF_wellness, Date >= max(Date)- days(14) & Wellness_Total_Scale < -2.5), aes(Date, Wellness_Total_Scale, label=Name))+theme(axis.text.x= element_text(angle=90, size=12))
+ggplot(data=subset(DF_wellness, Date >= wellness_date - days(21)), aes(Date, Wellness_Total_Scale))+geom_bar(data=subset(DF_wellness_day, Date >= wellness_date - days(21)), aes(fill= Wellness_marker_color), stat="summary", fun.y="mean")+geom_point(aes(shape=Wellness_marker, fill= Wellness_marker_color), stat="identity", size = 3)+scale_shape_identity()+scale_fill_identity()+geom_text(data=subset(DF_wellness, Date >= wellness_date- days(21)), aes(Date, y= 0, label=day), angle=90, vjust=2)+geom_text_repel(data=subset(DF_wellness, Date >= max(Date)- days(14) & Wellness_Total_Scale < -2.5), aes(Date, Wellness_Total_Scale, label=Name))+theme(axis.text.x= element_text(angle=90, size=12))
 
 })
 ```
