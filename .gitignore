@@ -2,3 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+<<<<<<< HEAD
+=======
+*.csv
+.DS_Store
+>>>>>>> 8c43deb0bb950ce1fe6941311d03c5e02d2a2015
