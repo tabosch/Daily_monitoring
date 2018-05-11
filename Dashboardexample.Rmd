@@ -177,6 +177,7 @@ renderPlot({
     geom_line() + 
     scale_colour_gradient(low="red", high="green", guide = FALSE) +
     geom_hline(yintercept= 0, lty=3) +
+    geom_hline(yintercept= -2, colour="red", lty=1, alpha=2.5/10) +
     facet_grid(Name ~., switch = "y") +
     scale_x_date(date_breaks = "1 day", date_labels =  "%a") +
     theme(axis.title=element_blank(), 
