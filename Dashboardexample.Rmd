@@ -213,6 +213,7 @@ renderPlot({
   
   ggplot(last_21_days_data, aes(Date, Wellness_Total_Scale)) + 
     geom_bar(data = last_21_days_squad_avg_data, aes(fill = Wellness_status), stat="summary", fun.y="mean") + 
+    geom_line(data = last_21_days_squad_avg_data, stat="summary", fun.y="mean", alpha = 8/10, linetype="dotted") + 
     geom_point(aes(shape = Wellness_status, fill= Wellness_status), stat="identity", alpha=5/10) + 
     geom_text_repel(data=last_21_days_data %>% filter(Wellness_Total_Scale < -2.5), aes(label=Name)) + 
     
