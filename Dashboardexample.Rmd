@@ -231,11 +231,7 @@ Alerts
 ```{r, echo=FALSE}
 renderDataTable(
   datatable(data.frame(names = DF_wellness_daily$id[DF_wellness_daily$SQ_S < -1.0 ]), 
-<<<<<<< HEAD
             options = list(dom = 't',scrollY = "50px"), 
-=======
-            options = list(dom = 't'), 
->>>>>>> 8c43deb0bb950ce1fe6941311d03c5e02d2a2015
             rownames= FALSE, 
             colnames = NULL) %>% 
     formatStyle("names",backgroundColor="red")
@@ -247,11 +243,7 @@ renderDataTable(
 ```{r, echo=FALSE}
 renderDataTable(
   datatable(data.frame(names = DF_wellness_daily$id[DF_wellness_daily$SL_S < -1.0 ]), 
-<<<<<<< HEAD
-            options = list(dom = 't',scrollY = "50px"), 
-=======
-            options = list(dom = 't'), 
->>>>>>> 8c43deb0bb950ce1fe6941311d03c5e02d2a2015
+            options = list(dom = 't',scrollY = "50px"),
             rownames= FALSE, 
             colnames = NULL) %>% 
     formatStyle("names",backgroundColor="red")
@@ -263,11 +255,7 @@ renderDataTable(
 ```{r, echo=FALSE}
 renderDataTable(
   datatable(data.frame(names = DF_wellness_daily$id[DF_wellness_daily$RPE_S < -1.0 ]), 
-<<<<<<< HEAD
-            options = list(dom = 't',scrollY = "50px"), 
-=======
-            options = list(dom = 't'), 
->>>>>>> 8c43deb0bb950ce1fe6941311d03c5e02d2a2015
+options = list(dom = 't',scrollY = "50px"),
             rownames= FALSE, 
             colnames = NULL) %>% 
     formatStyle("names",backgroundColor="red")
@@ -279,11 +267,7 @@ renderDataTable(
 ```{r, echo=FALSE}
 renderDataTable(
   datatable(data.frame(names = DF_wellness_daily$id[DF_wellness_daily$Sore_S < -1.0 ]), 
-<<<<<<< HEAD
             options = list(dom = 't',scrollY = "50px"), 
-=======
-            options = list(dom = 't'), 
->>>>>>> 8c43deb0bb950ce1fe6941311d03c5e02d2a2015
             rownames= FALSE, 
             colnames = NULL) %>% 
     formatStyle("names",backgroundColor="red")
@@ -295,11 +279,7 @@ renderDataTable(
 ```{r, echo=FALSE}
 renderDataTable(
   datatable(data.frame(names = DF_wellness_daily$id[DF_wellness_daily$Stress_S < -1.0 ]), 
-<<<<<<< HEAD
             options = list(dom = 't',scrollY = "50px"), 
-=======
-            options = list(dom = 't'), 
->>>>>>> 8c43deb0bb950ce1fe6941311d03c5e02d2a2015
             rownames= FALSE, 
             colnames = NULL) %>% 
     formatStyle("names",backgroundColor="red")
