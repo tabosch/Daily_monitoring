@@ -197,25 +197,36 @@ renderPlot({
 ###Running Team Avg Wellness Scaled
 ```{r, echo=FALSE, fig.height=20, fig.width=40}
 
-DF_wellness$Wellness_marker <- ifelse(DF_wellness$Wellness_Total_Scale > 1, 24, ifelse(DF_wellness$Wellness_Total_Scale < -1.5, 25, 21))
-DF_wellness$Wellness_marker_color <- ifelse(DF_wellness$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness$Wellness_Total_Scale < -1.5, "red", "yellow"))
-DF_wellness_day <- 
-  DF_wellness %>%
-  group_by(Date) %>%
-  summarize(Wellness_Total_Scale = mean(Wellness_Total_Scale, na.rm=T))
-DF_wellness_day$Wellness_marker_color <- ifelse(DF_wellness_day$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness_day$Wellness_Total_Scale < -1.5, "red", "yellow"))
 renderPlot({
+  last_21_days <- DF_wellness %>% filter(Date >= wellness_date - days(21))
   
-DF_wellness$day <- weekdays(DF_wellness$Date)
-DF_wellness$Wellness_marker <- ifelse(DF_wellness$Wellness_Total_Scale > 1, 24, ifelse(DF_wellness$Wellness_Total_Scale < -1.5, 25, 21))
-DF_wellness$Wellness_marker_color <- ifelse(DF_wellness$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness$Wellness_Total_Scale < -1.5, "red", "yellow"))
-DF_wellness_day <- 
-  DF_wellness %>%
-  group_by(Date) %>%
-  summarize(Wellness_Total_Scale = mean(Wellness_Total_Scale, na.rm=T))
-DF_wellness_day$Wellness_marker_color <- ifelse(DF_wellness_day$Wellness_Total_Scale > 1, "green", ifelse(DF_wellness_day$Wellness_Total_Scale < -1.5, "red", "yellow"))
-ggplot(data=subset(DF_wellness, Date >= wellness_date - days(21)), aes(Date, Wellness_Total_Scale))+geom_bar(data=subset(DF_wellness_day, Date >= wellness_date - days(21)), aes(fill= Wellness_marker_color), stat="summary", fun.y="mean")+geom_point(aes(shape=Wellness_marker, fill= Wellness_marker_color), stat="identity", size = 3)+scale_shape_identity()+scale_fill_identity()+geom_text(data=subset(DF_wellness, Date >= wellness_date- days(21)), aes(Date, y= 0, label=day), angle=90, vjust=2)+geom_text_repel(data=subset(DF_wellness, Date >= max(Date)- days(14) & Wellness_Total_Scale < -2.5), aes(Date, Wellness_Total_Scale, label=Name))+theme(axis.text.x= element_text(angle=90, size=12))
-
+  last_21_days_data <- last_21_days %>%
+    mutate(Wellness_status = cut(Wellness_Total_Scale, breaks=c(-Inf, -1.5, 1, Inf), labels=c("red", "yellow", "green")))
+  
+  last_21_days_squad_avg_data <- last_21_days %>%
+    group_by(Date) %>%
+    summarize(Wellness_Total_Scale = mean(Wellness_Total_Scale, na.rm=T), 
+              Wellness_status = cut(Wellness_Total_Scale, breaks=c(-Inf, -1.5, 1, Inf), labels=c("red","yellow","green")))
+  
+  shapes <- c(25,21,24)
+  names(shapes) <- c("red", "yellow", "green")
+  
+  ggplot(last_21_days_data, aes(Date, Wellness_Total_Scale)) + 
+    geom_bar(data = last_21_days_squad_avg_data, aes(fill = Wellness_status), stat="summary", fun.y="mean") + 
+    geom_point(aes(shape = Wellness_status, fill= Wellness_status), stat="identity", alpha=5/10) + 
+    geom_text_repel(data=last_21_days_data %>% filter(Wellness_Total_Scale < -2.5), aes(label=Name)) + 
+    
+    scale_shape_manual(values = shapes, guide = FALSE) +
+    scale_fill_identity() + 
+    scale_x_date(date_breaks = "1 day", date_labels =  "%a %d") +
+    
+    theme_minimal() +
+    theme(axis.text.x= element_text(angle=45),
+          panel.grid.minor = element_blank()) +
+    
+    ggtitle("21 Day Wellness v Squad Average") +
+    ylab("Wellness Scaled") +
+    xlab(NULL)
 })
 ```
 
