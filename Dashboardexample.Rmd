@@ -29,23 +29,19 @@ library(tibble)
 library(zoo)
 
 DF_wellness <- read.csv("wellness_deidentified.csv")
-DF_wellness$newdate <- as.Date(DF_wellness$newdate, "%Y-%m-%d")
-DF_wellness$day <- weekdays(DF_wellness$newdate)
+DF_wellness$newdate <- ymd(DF_wellness$newdate)
+DF_wellness$day <- lubridate::wday(DF_wellness$newdate, label = TRUE, abbr = TRUE)
+
 DF_wellness_daily <- DF_wellness %>% filter(newdate >= max(DF_wellness$newdate))
 DF_wellness_daily$id <- ordered(DF_wellness_daily$id, levels = rev(sort(unique(DF_wellness_daily$id))))
 DF_wellness_daily$Name <- DF_wellness_daily$id
-Name <- DF_wellness_daily$id
+
+Name <- unique(DF_wellness$id)
 Weigh_in_check <- data.frame(Name)
 Weigh_in_check <- setDF(setDT(Weigh_in_check)[setDT(DF_wellness_daily), Wellness_Total := Wellness_Total, on=c("Name")])
 Weigh_in_check$Weighed_in <- ifelse(is.na(Weigh_in_check$Wellness_Total), "no", "yes")
 
-VB_D_RPE <- DF_wellness[,c("newdate","id", "RPE", "Cog_RPE", "B_RPE", "M_RPE")]
-VB_D_RPE$Cog_RPE <- as.numeric(as.character(VB_D_RPE$Cog_RPE))
-VB_D_RPE$B_RPE <- as.numeric(as.character(VB_D_RPE$B_RPE))
-VB_D_RPE$M_RPE <- as.numeric(as.character(VB_D_RPE$M_RPE))
-VB_D_RPE$day <- weekdays(ymd(VB_D_RPE$newdate))
-VB_D_RPE$day <- as.factor(VB_D_RPE$day)
-VB_D_RPE$day <- factor(VB_D_RPE$day, c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+VB_D_RPE <- DF_wellness[,c("newdate","id", "day", "RPE", "Cog_RPE", "B_RPE", "M_RPE")]
 VB_D_RPE_update <- na.omit(VB_D_RPE)
 
 VB_D_RPE_update$Cog_RPE_S <- ave(VB_D_RPE_update$Cog_RPE, VB_D_RPE_update$id, VB_D_RPE_update$day, FUN=scale)
@@ -124,18 +120,15 @@ Row (data-width = 1500)
 
 ###  Has not filled out Wellness {data-height=600}
 
-<style>
-div.yellow pre {background-color:yellow; }
-div.yellow pre.r {background-color:yellow; }
-</style>
-
-<div class = "yellow">
 ```{r, echo=FALSE}
-renderPrint({
-  print(Weigh_in_check$id[Weigh_in_check$Weighed_in=="no"], max.levels=0)
-})
+renderDataTable(
+  datatable(data.frame(names = Weigh_in_check$Name[Weigh_in_check$Weighed_in == "no"]), 
+            options = list(dom = 't'), 
+            rownames= FALSE, 
+            colnames = NULL) %>% 
+    formatStyle("names",backgroundColor="yellow")
+)
 ```
-</div>
 
 Row {.tabset}
 ----------------------------
@@ -234,74 +227,64 @@ Column (data-width=200)
 Alerts
 
 ### Sleep Quality < -1.0 {data-height=200}
-<style>
-div.red pre {background-color:red; }
-div.red pre.r {background-color:lightred; }
-</style>
 
-<div class = "red">
 ```{r, echo=FALSE}
-renderPrint({
-  print(DF_wellness_daily$id[DF_wellness_daily$SQ_S < -1.0 ], max.levels=0)
-})
+renderDataTable(
+  datatable(data.frame(names = DF_wellness_daily$id[DF_wellness_daily$SQ_S < -1.0 ]), 
+            options = list(dom = 't'), 
+            rownames= FALSE, 
+            colnames = NULL) %>% 
+    formatStyle("names",backgroundColor="red")
+)
 ```
-</div>
 
 ### Sleep Length < -1.0 {data-height=200}
-<style>
-div.red pre {background-color:red; }
-div.red pre.r {background-color:lightred; }
-</style>
 
-<div class = "red">
 ```{r, echo=FALSE}
-renderPrint({
-  print(DF_wellness_daily$id[DF_wellness_daily$SL_S < -1.0 ], max.levels=0)
-})
+renderDataTable(
+  datatable(data.frame(names = DF_wellness_daily$id[DF_wellness_daily$SL_S < -1.0 ]), 
+            options = list(dom = 't'), 
+            rownames= FALSE, 
+            colnames = NULL) %>% 
+    formatStyle("names",backgroundColor="red")
+)
 ```
-</div>
 
 ### RPE < -1.0 {data-height=200}
-<style>
-div.red pre {background-color:red; }
-div.red pre.r {background-color:lightred; }
-</style>
 
-<div class = "red">
 ```{r, echo=FALSE}
-renderPrint({
-  print(DF_wellness_daily$id[DF_wellness_daily$RPE_S < -1.0 ], max.levels=0)
-})
+renderDataTable(
+  datatable(data.frame(names = DF_wellness_daily$id[DF_wellness_daily$RPE_S < -1.0 ]), 
+            options = list(dom = 't'), 
+            rownames= FALSE, 
+            colnames = NULL) %>% 
+    formatStyle("names",backgroundColor="red")
+)
 ```
-</div>
 
 ### Soreness < -1.0 {data-height=200}
-<style>
-div.red pre {background-color:red; }
-div.red pre.r {background-color:lightred; }
-</style>
 
-<div class = "red">
 ```{r, echo=FALSE}
-renderPrint({
-  print(DF_wellness_daily$id[DF_wellness_daily$Sore_S < -1.0 ], max.levels=0)
-})
+renderDataTable(
+  datatable(data.frame(names = DF_wellness_daily$id[DF_wellness_daily$Sore_S < -1.0 ]), 
+            options = list(dom = 't'), 
+            rownames= FALSE, 
+            colnames = NULL) %>% 
+    formatStyle("names",backgroundColor="red")
+)
 ```
-</div>
 
 ### Stress < -1.0 {data-height=200}
-<style>
-div.red pre {background-color:red; }
-div.red pre.r {background-color:lightred; }
-</style>
 
-<div class = "red">
 ```{r, echo=FALSE}
-renderPrint({
-  print(DF_wellness_daily$id[DF_wellness_daily$Stress_S < -1.0 ], max.levels=0)
-})
+renderDataTable(
+  datatable(data.frame(names = DF_wellness_daily$id[DF_wellness_daily$Stress_S < -1.0 ]), 
+            options = list(dom = 't'), 
+            rownames= FALSE, 
+            colnames = NULL) %>% 
+    formatStyle("names",backgroundColor="red")
+)
 ```
-</div>
 
 
 Coaches Report
