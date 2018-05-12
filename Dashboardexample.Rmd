@@ -26,7 +26,7 @@ library(d3heatmap)
 library(plotly)
 library(tidyverse)
 library(tibble)
-library(zoo)
+
 
 DF_wellness <- read.csv("wellness_deidentified.csv")
 DF_wellness$Date <- ymd(DF_wellness$newdate)
@@ -54,9 +54,9 @@ VB_D_RPE_2 <-
 catdata <- read.csv("catdata.csv")
 catdata$Date <- as.Date(catdata$Date, format ="%m/%d/%y")
  catdata$Week <- lubridate::isoweek(ymd(catdata$Date))
- catdata$day <- weekdays(as.Date(catdata$Date))
- catdata$day <- as.factor(catdata$day)
- catdata$day <- factor(catdata$day, c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+catdata$day <- weekdays(as.Date(catdata$Date))
+  catdata$day <- as.factor(catdata$day)
+  catdata$day <- factor(catdata$day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"))
 catdata$Duration_minutes <- 60 * 24 * as.numeric(times(catdata$Duration))
 catdata$Player_Load_minute <- catdata$Player.Load/catdata$Duration_minutes
 catdata$Meters_minute <- catdata$Odometer/catdata$Duration_minutes
@@ -119,7 +119,7 @@ Row (data-width = 1500)
 
 ###  Date
 
-```{r, fig.height=0.5}
+```{r, fig.height=0.75}
 renderUI({HTML(paste0("<h4>", format(wellness_date, format="%b %d %Y"), "</h4>"))})
 ```
 
@@ -177,6 +177,7 @@ renderPlot({
     geom_line() + 
     scale_colour_gradient(low="red", high="green", guide = FALSE) +
     geom_hline(yintercept= 0, lty=3) +
+     geom_hline(yintercept= -2, lty=2, colour="red") +
     facet_grid(Name ~., switch = "y") +
     scale_x_date(date_breaks = "1 day", date_labels =  "%a") +
     theme(axis.title=element_blank(), 
@@ -384,7 +385,7 @@ Column {.sidebar}
 ###Player Select
 ```{r,echo=FALSE}
 
-selectInput("Player_report", "Select Athlete", catdata$id, selected = catdata$id[[2]])
+selectInput("Player_report", "Select Athlete", catdata$id, selected = catdata$id[[8]])
 ```
 
 Column  {data-width=500}
@@ -399,9 +400,6 @@ barplot1 <- reactive({
   player_drills <- catdata %>%
     filter(id == input$Player_report,
            Date >= max(Date), Period.Number > 0)
-  
-  
- 
   
   ggplot(player_drills, aes(reorder(Period.Name, Period.Number), Player.Load, fill=Meters_minute))+geom_bar(stat="identity")+facet_wrap(~id)+geom_text(aes(y=5,label=Period.Name), angle=90, hjust=-.1, size=3)+theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
@@ -445,17 +443,11 @@ Column {data-width=500}
 ```{r, echo=FALSE}
 
 barplot3 <- reactive({
-  catdata$day <- weekdays(as.Date(catdata$Date))
-  catdata$day <- as.factor(catdata$day)
-  catdata$day <- factor(catdata$day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"))
-  plot3 <-
+   plot3 <-
     catdata %>%
-    filter(id == input$Player_report, Period.Number < 1) %>% group_by(id, Date, day) %>%
-    summarize(Player.Load = round(mean(Player.Load, na.rm= T),2), Odometer = round(mean(Odometer, na.rm=T),2), Meters_minute = round(mean(Meters_minute, na.rm=T),2))
-  plot5 <- catdata %>%
-    filter(id == input$Player_report, Date >= max(Date) - days(7), Period.Number < 1) %>% group_by(id, Date, day) %>%
-    select(id, Date, day, Player.Load, Odometer, Meters_minute)
-  ggplot(plot3, aes(day, Player.Load))+geom_violin(stat="ydensity")+geom_point(data=plot5, aes(day, Player.Load), colour="red", size=3)+geom_text(data=plot5, aes(label=round(Player.Load,0)), vjust=2, colour="red")+coord_flip()+theme(axis.text=element_text(size=12),axis.title=element_text(size=14,face="bold"),plot.title = element_text(size = 14, face = "bold"))+xlab(" ")+ylab("Player Load (au) ")+ggtitle("Range of PL with Today's PL (Red Dot)")
+    filter(id == input$Player_report, 
+          Period.Number < 1)
+  ggplot(plot3, aes(day, Player.Load))+geom_violin(stat="ydensity")+geom_point(data=subset(plot3, Date >= max(Date) - lubridate::days(7)),colour="red", size = 3)+geom_text(data=subset(plot3, Date >= max(Date) - lubridate::days(7)), aes(label=round(Player.Load,0)), colour="red", size = 4, vjust=-.5) +coord_flip()+theme(axis.text=element_text(size=12),axis.title=element_text(size=14,face="bold"),plot.title = element_text(size = 14, face = "bold"))+xlab(" ")+ylab("Player Load (au) ")+ggtitle("Range of PL with Today's PL (Red Dot)")
 })
 
 renderPlot({
@@ -468,17 +460,12 @@ renderPlot({
 ###Distance Covered 
 ```{r, echo=FALSE}
 barplot4 <- reactive({
-  catdata$day <- weekdays(as.Date(catdata$Date))
-  catdata$day <- as.factor(catdata$day)
-  catdata$day <- factor(catdata$day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"))
   plot4 <-
     catdata %>%
-    filter(id == input$Player_report, Period.Number < 1) %>% group_by(id, Date, day) %>%
-    select(id, Date, day, Player.Load, Odometer, Meters_minute)
-  plot6 <- catdata %>%
-    filter(id == input$Player_report, Date >= max(Date) - days(7), Period.Number < 1) %>% group_by(id, Date, day) %>%
-    select(id, Date, day, Player.Load, Odometer, Meters_minute)
-  ggplot(plot4, aes(day, Odometer))+geom_violin(stat="ydensity")+geom_point(data=plot6, aes(day, Odometer, colour=Meters_minute), size=3)+scale_colour_gradient2(low="yellow", mid="green", high = "red")+geom_text(data=plot6, aes(label=round(Odometer,0)), vjust=2, colour="red")+coord_flip()+theme(axis.text=element_text(size=12),axis.title=element_text(size=14,face="bold"),plot.title = element_text(size = 14, face = "bold"))+xlab(" ")+ylab("Distance (m) ")+ggtitle("Range of Dist with Today's Dist (Red Dot)")
+    filter(id == input$Player_report, 
+          Period.Number < 1)
+  
+  ggplot(plot4, aes(day, Odometer))+geom_violin(stat="ydensity")+geom_point(data=subset(plot4, Date >= max(Date) - lubridate::days(7)),colour="red", size = 3)+geom_text(data=subset(plot4, Date >= max(Date) - lubridate::days(7)), aes(label=round(Odometer,0)), colour="red", size = 4, vjust=-.5)+coord_flip()+theme(axis.text=element_text(size=12),axis.title=element_text(size=14,face="bold"),plot.title = element_text(size = 14, face = "bold"))+xlab(" ")+ylab("Distance (m) ")+ggtitle("Range of Dist with Today's Dist (Red Dot)")
 })
 
 renderPlot({
