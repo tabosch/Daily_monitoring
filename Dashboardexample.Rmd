@@ -214,7 +214,7 @@ renderPlot({
   
   ggplot(last_21_days_data, aes(Date, Wellness_Total_Scale)) + 
     geom_bar(data = last_21_days_squad_avg_data, aes(fill = Wellness_status), stat="summary", fun.y="mean") + 
-    geom_line(data = last_21_days_squad_avg_data, stat="summary", fun.y="mean", alpha = 8/10, linetype="dotted") + 
+    geom_line(data = last_21_days_squad_avg_data, stat="summary", fun.y="mean", alpha = 8/10, linetype="dotted", size = 3) + 
     geom_point(aes(shape = Wellness_status, fill= Wellness_status), stat="identity", alpha=5/10) + 
     geom_text_repel(data=last_21_days_data %>% filter(Wellness_Total_Scale < -2.5), aes(label=Name)) + 
     
@@ -244,7 +244,7 @@ VB_D_RPE_3 <- VB_D_RPE_2[,c("Name", "Cog_RPE", "B_RPE", "M_RPE")]
 VB_D_RPE_melt <- melt(VB_D_RPE_3, id.var = "Name")
 VB_D_RPE_melt$value <- as.numeric(as.character(VB_D_RPE_melt$value))
 renderPlot({
-ggplot(VB_D_RPE_melt, aes(reorder(Name, value), value, fill=variable))+geom_bar(stat="identity")+scale_y_continuous(breaks = c(0:15), limits = c(0,15), labels= c(0:15))+coord_flip()+ggtitle(max(VB_D_RPE_2$Date))+xlab("")+ylab("Max is 15, higher equals easier")
+ggplot(VB_D_RPE_melt, aes(variable, value, fill=variable))+geom_bar(stat="identity")+coord_polar(theta = "y", start = 0)+facet_wrap(~Name)+ggtitle(max(VB_D_RPE_2$Date))+xlab("")+ylab("Max is 5, higher equals easier")
 })
 ```
 
@@ -492,57 +492,46 @@ Column {data-width=200}
 Alerts
 
 ### Player Load low < -1.5 {data-height=200}
-<style>
-div.yellow pre {background-color:yellow; }
-div.yellow pre.r {background-color:yellow; }
-</style>
 
-<div class = "yellow">
+<div style = "color: #f6d40a">
 ```{r, echo=FALSE}
 renderPrint({
-  print(Catapult_daily$id[Catapult_daily$Date >= max(Catapult_daily$Date) & Catapult_daily$PL_scale < -1.5 ], max.levels=0)
+  names <- Catapult_daily$id[Catapult_daily$Date >= max(Catapult_daily$Date) & Catapult_daily$PL_scale < -1.5 ]
+
+  HTML(paste(names, collapse = "<br />"))
 })
 ```
 </div>
 
 ### Distance Low < -1.5 {data-height=200}
-<style>
-div.yellow pre {background-color:yellow; }
-div.yellow pre.r {background-color:yellow; }
-</style>
 
-<div class = "yellow">
+<div style = "color: #f6d40a">
 ```{r, echo=FALSE}
 renderPrint({
-  print(Catapult_daily$id[Catapult_daily$Date >= max(Catapult_daily$Date) & Catapult_daily$Meters_scale < -1.5 ], max.levels=0)
+  names <- Catapult_daily$id[Catapult_daily$Date >= max(Catapult_daily$Date) & Catapult_daily$Meters_scale < -1.5 ]
+   HTML(paste(names, collapse = "<br />"))
 })
 ```
 </div>
 
 ### Player Load High > 2.0 {data-height=200}
-<style>
-div.red pre {background-color:red; }
-div.red pre.r {background-color:red; }
-</style>
 
-<div class = "red">
+<div style = "color: #f02c2c">
 ```{r, echo=FALSE}
 renderPrint({
-  print(Catapult_daily$id[Catapult_daily$Date >= max(Catapult_daily$Date) & Catapult_daily$PL_scale >= 1.5 ], max.levels=0)
+  names <- Catapult_daily$id[Catapult_daily$Date >= max(Catapult_daily$Date) & Catapult_daily$PL_scale >= 1.5 ]
+   HTML(paste(names, collapse = "<br />"))
 })
 ```
 </div>
 
 ### Distance High > 2.0SD {data-height=200}
-<style>
-div.red pre {background-color:red; }
-div.red pre.r {background-color:red; }
-</style>
 
-<div class = "red">
+<div style = "color: #f02c2c">
 ```{r, echo=FALSE}
 renderPrint({
-  print(Catapult_daily$id[Catapult_daily$Date >= max(Catapult_daily$Date) & Catapult_daily$Meters_scale >= 1.5 ], max.levels=0)
+  names <- Catapult_daily$id[Catapult_daily$Date >= max(Catapult_daily$Date) & Catapult_daily$Meters_scale >= 1.5 ]
+   HTML(paste(names, collapse = "<br />"))
 })
 ```
 </div>
