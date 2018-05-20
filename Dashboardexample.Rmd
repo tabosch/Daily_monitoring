@@ -29,8 +29,7 @@ library(tibble)
 library(zoo)
 ```
 
-```{r wellness_data, include=FALSE, cache=TRUE}
-# Load & prepare Wellness Data
+```{r load_wellness_data, include=FALSE, cache=TRUE}
 DF_wellness <- read.csv("wellness_deidentified.csv")
 DF_wellness$Date <- ymd(DF_wellness$newdate)
 DF_wellness$day <- lubridate::wday(DF_wellness$Date, label = TRUE, abbr = FALSE)
@@ -50,9 +49,11 @@ VB_D_RPE_2 <-
   filter(Date==max(Date))
 ```
 
-```{r gps_data, include=FALSE, cache=TRUE}
-# Load and prepare GOS data
+```{r load_gps_data, include=FALSE, cache=TRUE}
 catdata <- read.csv("catdata.csv")
+```
+
+```{r include=FALSE }
 catdata$Date <- as.Date(catdata$Date, format ="%m/%d/%y")
  catdata$Week <- lubridate::isoweek(ymd(catdata$Date))
  catdata$day <- weekdays(as.Date(catdata$Date))
