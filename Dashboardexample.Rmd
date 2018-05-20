@@ -278,33 +278,45 @@ renderPlot({
 
 ###Differentiated RPE
 ```{r, echo=FALSE, fig.height=25, fig.width=35}
-VB_D_RPE_2 <-
-  VB_D_RPE %>%
-  filter(Date==max(Date))
-
-VB_D_RPE_2$Date <- format(VB_D_RPE_2$Date, "%a %b %d")
-VB_D_RPE_3 <- VB_D_RPE_2[,c("Name", "Cog_RPE", "B_RPE", "M_RPE")]
-VB_D_RPE_melt <- melt(VB_D_RPE_3, id.var = "Name")
-VB_D_RPE_melt$value <- as.numeric(as.character(VB_D_RPE_melt$value))
 renderPlot({
-ggplot(VB_D_RPE_melt, aes(variable, value, fill=variable))+geom_bar(stat="identity")+coord_polar(theta = "y", start = 0)+facet_wrap(~Name)+ggtitle(max(VB_D_RPE_2$Date))+xlab("")+ylab("Max is 5, higher equals easier")
+  
+  VB_D_RPE_2 <- VB_D_RPE %>% filter(Date==wellness_date())
+  VB_D_RPE_2$Date <- format(VB_D_RPE_2$Date, "%a %b %d")
+  VB_D_RPE_3 <- VB_D_RPE_2[,c("Name", "Cog_RPE", "B_RPE", "M_RPE")]
+  VB_D_RPE_melt <- melt(VB_D_RPE_3, id.var = "Name")
+  VB_D_RPE_melt$value <- as.numeric(as.character(VB_D_RPE_melt$value))
+  
+  ggplot(VB_D_RPE_melt, aes(variable, value, fill=variable)) + 
+    geom_bar(stat="identity") + 
+    coord_polar(theta = "y", start = 0) + 
+    facet_wrap(~Name)+ggtitle(max(VB_D_RPE_2$Date)) + 
+    xlab("") + 
+    ylab("Max is 5, higher equals easier")
 })
 ```
 
 ###Player Report Card Scaled
 ```{r, echo=FALSE}
-VB4 <-
-  DF_wellness %>%
-  filter(Date==max(Date))
 
-VB4$Date <- format(VB4$Date, "%a %b %d")
 renderPlot({
-VB5 <-VB4[,c("Name", "SL_S", "RPE_S", "Sore_S", "Stress_S", "SQ_S")]
-VB5_melt <- melt(VB5, id.vars = "Name")
-ggplot(VB5_melt, aes(reorder(Name, value), value, fill=variable))+geom_bar(stat="identity")+coord_flip()+xlab("Athlete")+ylab("Scaled Value for Wellness")+ggtitle(max(VB4$Date))+geom_hline(yintercept = -2.5, colour="red", lty=2)+geom_hline(yintercept = -1, colour="yellow", lty=1, size = 2)+geom_text(aes(Name, value, label=round(value,1)), position=position_stack(vjust=0.5))
+  
+  VB4 <- DF_wellness %>% filter(Date==wellness_date())
+
+  VB4$Date <- format(VB4$Date, "%a %b %d")
+  
+  VB5 <-VB4[,c("Name", "SL_S", "RPE_S", "Sore_S", "Stress_S", "SQ_S")]
+  VB5_melt <- melt(VB5, id.vars = "Name")
+  ggplot(VB5_melt, aes(reorder(Name, value), value,fill=variable)) + 
+    geom_bar(stat="identity") + 
+    coord_flip() + 
+    xlab("Athlete") + 
+    ylab("Scaled Value for Wellness") + 
+    ggtitle(max(VB4$Date)) + 
+    geom_hline(yintercept = -2.5, colour="red", lty=2) + 
+    geom_hline(yintercept = -1, colour="yellow", lty=1, size = 2) + 
+    geom_text(aes(Name, value, label=round(value,1)), position=position_stack(vjust=0.5))
 })
 ```
-
 
 Column (data-width=200)
 --------------------------
