@@ -2,8 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
-<<<<<<< HEAD
-=======
+.Dashboardexample_cache/
 *.csv
 .DS_Store
->>>>>>> 8c43deb0bb950ce1fe6941311d03c5e02d2a2015

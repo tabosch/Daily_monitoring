@@ -8,7 +8,7 @@ output:
 runtime: shiny
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, cache=TRUE}
 library(flexdashboard)
 library(reshape2)
 library(lubridate)
@@ -27,11 +27,17 @@ library(plotly)
 library(tidyverse)
 library(tibble)
 library(zoo)
+```
 
+```{r wellness_data, include=FALSE, cache=TRUE}
+# Load & prepare Wellness Data
 DF_wellness <- read.csv("wellness_deidentified.csv")
 DF_wellness$Date <- ymd(DF_wellness$newdate)
 DF_wellness$day <- lubridate::wday(DF_wellness$Date, label = TRUE, abbr = FALSE)
 DF_wellness$Name <- factor(DF_wellness$id, levels = rev(sort(unique(DF_wellness$id))))
+```
+
+```{r prepare_wellness_data, include=FALSE}
 
 wellness_date <- max(DF_wellness$Date)
 
@@ -50,7 +56,10 @@ VB_D_RPE_update$M_RPE_S <- ave(VB_D_RPE_update$M_RPE, VB_D_RPE_update$Name, VB_D
 VB_D_RPE_2 <-
   VB_D_RPE %>%
   filter(Date==max(Date))
+```
 
+```{r gps_data, include=FALSE, cache=TRUE}
+# Load and prepare GOS data
 catdata <- read.csv("catdata.csv")
 catdata$Date <- as.Date(catdata$Date, format ="%m/%d/%y")
  catdata$Week <- lubridate::isoweek(ymd(catdata$Date))
@@ -117,31 +126,52 @@ Wellness
 Row (data-width = 1500)
 --------------------------------
 
-###  Date
-
-```{r, fig.height=0.5}
-renderUI({HTML(paste0("<h4>", format(wellness_date, format="%b %d %Y"), "</h4>"))})
+<h3>Date</h3>
+```{r}
+wellness_date_format <- "%b %d %Y"
+last_30_wellness_dates <- tail(unique(format(sort(DF_wellness$Date), format = wellness_date_format)), 30)
+selectInput("wellness_date", NULL, last_30_wellness_dates, selected = format(wellness_date, format=wellness_date_format))
 ```
 
-
-### Daily Compliance 
-
+<h3>Compliance</h3>
 ```{r}
-renderGauge({
-  rate <- compliance %>% summarise(compliance_rate = mean(Screened == TRUE) * 100) %>% .$compliance_rate
+
+compliance_data <- reactive({
+  wellness_day_data <- DF_wellness %>%
+    filter(Date == mdy(input$wellness_date))
+  
+  data.frame(Name = unique(DF_wellness$Name)) %>% 
+    merge(wellness_day_data %>% select(Name, Wellness_Total), all.x = TRUE) %>% 
+    mutate(Screened = !is.na(Wellness_Total))
+})
+
+compliance_guage <- reactive({
+
+  rate <- compliance_data() %>% 
+    summarise(compliance_rate = mean(Screened == TRUE) * 100) %>% 
+    .$compliance_rate
+  
+  print(mean(compliance_data()$Screened == TRUE))
+  
   gauge(rate, min = 0, max = 100, symbol = '%', gaugeSectors(
     success = c(80, 100), warning = c(50, 79), danger = c(0, 49)
   ))
 })
+
+renderGauge({
+  compliance_guage()
+})
 ```
 
-###  Has not filled out Wellness {data-height=600}
-
-<div style = "color: #f6d40a">
+<h3>Missing</h3>
+<div style = "color: #f6d40a; margin: 0px 0px 0px 10px;">
 ```{r, echo=FALSE}
+non_compliant_athletes <- reactive({
+  names <- compliance_data()$Name[compliance_data()$Screened == FALSE]
+})
+
 renderUI({
-  names <- compliance$Name[compliance$Screened == FALSE]
-  HTML(paste(names, collapse = "<br />"))
+  HTML(paste(non_compliant_athletes(), collapse = "<br />"))
 })
 ```
 </div>
