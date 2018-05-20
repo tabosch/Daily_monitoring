@@ -124,7 +124,7 @@ Row (data-width = 1500)
 latest_wellness_date <- max(DF_wellness$Date)
 
 wellness_date_format <- "%b %d %Y"
-last_30_wellness_dates <- tail(unique(format(sort(DF_wellness$Date), format = wellness_date_format)), 30)
+last_30_wellness_dates <- head(unique(format(sort(DF_wellness$Date, decreasing = TRUE), format = wellness_date_format)), 21)
 selectInput("wellness_date", NULL, last_30_wellness_dates, selected = format(latest_wellness_date, format=wellness_date_format))
 ```
 
