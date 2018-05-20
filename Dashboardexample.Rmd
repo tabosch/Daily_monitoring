@@ -240,7 +240,9 @@ renderPlot({
 ```{r, echo=FALSE, fig.height=20, fig.width=40}
 
 renderPlot({
-  last_21_days <- DF_wellness %>% filter(Date >= wellness_date - days(21))
+  
+  start_date <- wellness_date() - days(21)
+  last_21_days <- DF_wellness %>% filter(Date > start_date, Date <= wellness_date())
   
   last_21_days_data <- last_21_days %>%
     mutate(Wellness_status = cut(Wellness_Total_Scale, breaks=c(-Inf, -1.5, 1, Inf), labels=c("red", "yellow", "green")))
