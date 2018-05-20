@@ -135,7 +135,6 @@ wellness_date <- reactive({
 })
 ```
 
-
 <h3>Compliance</h3>
 ```{r}
 
