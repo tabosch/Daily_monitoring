@@ -404,26 +404,48 @@ Coaches Report
 Column {.tabset}
 -------------------
 
-###Player Report
+### Drill Intensity
 ```{r,echo=FALSE}
 renderPlot({
-
-ggplot(data=subset(catdata, Position %in% c("F", "M", "D") & Date >= max(Date) & Period.Number > 0), aes(reorder(Period.Name, Period.Number), Player.Load, fill=Meters_minute))+geom_bar(stat="identity")+facet_wrap(~id)+geom_text(aes(y=5,label=Period.Name), angle=90, hjust=-.1, size=3)+theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank())+scale_fill_gradient2(low="yellow", mid="green", high="red")
+  
+  # Dataset is all specific drill data on the GPS Date
+  gps_date <- max(catdata$Date)
+  data <- catdata %>% filter(Position %in% c("F", "M", "D"), Date >= gps_date, Period.Number > 0)
+  
+  ggplot(data, aes(reorder(Period.Name, Period.Number), reorder(Player.Name, Player.Load), fill=Meters_minute)) + 
+    geom_tile() +
+    scale_fill_gradient2(low="yellow", mid="green", high="red") +
+    theme_minimal() +
+    theme(axis.text.x= element_text(angle=45, hjust = 1)) +
+    labs(x=NULL, y= NULL)
 })
 ```
-
 
 ###ACR Table
 
 ```{r, echo=FALSE}
 renderDataTable({
   ACWR_Solver$ACR_weighted <- round(ACWR_Solver$ACR_weighted, 2)
-  datatable(ACWR_Solver,extensions= c('Scroller', 'FixedColumns'), options = list(
-    scrollY = 400, paging = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns= 1)), rownames = FALSE)%>%  
-    formatStyle('Player.Load', background =  styleColorBar(range(ACWR_Solver$Player.Load) , 'lightblue'),  backgroundSize = '95% 50%', backgroundRepeat = 'no-repeat', backgroundPosition = 'center') %>%  
-    formatStyle('Odometer', background =  styleColorBar(range(ACWR_Solver$Odometer), 'lightblue'),  backgroundSize = '95% 50%', backgroundRepeat = 'no-repeat',backgroundPosition = 'center') %>%  formatStyle('ACR_weighted', 'ACR_weighted', backgroundColor = styleInterval(c(0.8,1.3), c('yellow', 'green', 'red')))
+  
+  datatable(ACWR_Solver,
+            extensions= c('Scroller', 'FixedColumns'), 
+            options = list(scrollY = 400, 
+                           paging = TRUE, 
+                           scrollX = TRUE, 
+                           fixedColumns = list(leftColumns= 1)), 
+            rownames = FALSE) %>% 
+    formatStyle('Player.Load', 
+                background =  styleColorBar(range(ACWR_Solver$Player.Load) , 'lightblue'),  
+                backgroundSize = '95% 50%', 
+                backgroundRepeat = 'no-repeat', 
+                backgroundPosition = 'center') %>%  
+    formatStyle('Odometer', 
+                background =  styleColorBar(range(ACWR_Solver$Odometer), 'lightblue'),  
+                backgroundSize = '95% 50%', 
+                backgroundRepeat = 'no-repeat',
+                backgroundPosition = 'center') %>%
+    formatStyle('ACR_weighted', 'ACR_weighted', 
+                backgroundColor = styleInterval(c(0.8,1.3), c('yellow', 'green', 'red')))
 })
 
 ```
@@ -432,34 +454,39 @@ renderDataTable({
 ```{r,echo=FALSE}
 renderDataTable({
   SeasonData <- catdata
-SeasonData2 <- SeasonData %>% filter(Period.Number < 1)
-SpeedData <- SeasonData2 %>% select (id, Date, Week, Max.Velocity, Velocity.Band.5.TotEff, Velocity.Band.6.TotEff)
-SpeedData <- SpeedData %>% group_by(id) %>% mutate(PercentOfMax = round(Max.Velocity/max(Max.Velocity)*100,1))
-SpeedData <- SpeedData %>% group_by(id) %>% mutate(DateofLastMax90 = max(Date[which(PercentOfMax>90)]),
+  SeasonData2 <- SeasonData %>% filter(Period.Number < 1)
+  SpeedData <- SeasonData2 %>% select (id, Date, Week, Max.Velocity, Velocity.Band.5.TotEff, Velocity.Band.6.TotEff)
+  SpeedData <- SpeedData %>% group_by(id) %>% mutate(PercentOfMax = round(Max.Velocity/max(Max.Velocity)*100,1))
+  SpeedData <- SpeedData %>% group_by(id) %>% mutate(DateofLastMax90 = max(Date[which(PercentOfMax>90)]),
                                                    DateofLastMax80 = max(Date[which(PercentOfMax>80)]),
                                                    DateOfLast80Effort = max(Date[which(Velocity.Band.5.TotEff >0)]),
                                                    DateOfLast90Effort = max(Date[which(Velocity.Band.6.TotEff >0)]))
 
-SpeedData_New <- SpeedData %>% filter(Date >= max(Date))
-SpeedData_New$DaysSinceMax90 <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
+
+  SpeedData_New <- SpeedData %>% filter(Date >= max(Date))
+  SpeedData_New$DaysSinceMax90 <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
   as.Date(as.character(SpeedData_New$DateofLastMax90), format="%Y-%m-%d")
-SpeedData_New$DaysSince90Effort <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
+  SpeedData_New$DaysSince90Effort <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
   as.Date(as.character(SpeedData_New$DateOfLast90Effort), format="%Y-%m-%d")
-SpeedData_New$DaysSinceMax80 <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
+  SpeedData_New$DaysSinceMax80 <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
   as.Date(as.character(SpeedData_New$DateofLastMax80), format="%Y-%m-%d")
-SpeedData_New$DaysSince80Effort <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
+  SpeedData_New$DaysSince80Effort <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
   as.Date(as.character(SpeedData_New$DateOfLast80Effort), format="%Y-%m-%d")
-SpeedData_table <- SpeedData_New %>% filter(Date >="2017-10-12") %>% select(id, Date, Max.Velocity, DaysSinceMax90, DaysSince90Effort, DaysSinceMax80, DaysSince80Effort)
-SpeedData_table$Max.Velocity <- round(SpeedData_table$Max.Velocity, 2)
-datatable(SpeedData_table, extensions= c('Scroller', 'FixedColumns'), options = list(scrollY = 400, paging = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns= 4))
-) %>%  formatStyle('id', 'DaysSinceMax90', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))) %>%  formatStyle('DaysSinceMax90', 'DaysSinceMax90', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))
-) %>%  formatStyle('DaysSinceMax80', 'DaysSinceMax80', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))
-) %>%  formatStyle('Max.Velocity', background =  styleColorBar(range(SpeedData_table$Max.Velocity), 'lightblue')) 
+  SpeedData_table <- SpeedData_New %>% filter(Date >="2017-10-12") %>% select(id, Date, Max.Velocity, DaysSinceMax90, DaysSince90Effort, 
+                                                                              DaysSinceMax80, DaysSince80Effort)
 
+  SpeedData_table$Max.Velocity <- round(SpeedData_table$Max.Velocity, 2)
 
-
-
-  
+  datatable(SpeedData_table, 
+            extensions= c('Scroller', 'FixedColumns'), 
+            options = list(scrollY = 400, 
+                           paging = TRUE, 
+                           scrollX = TRUE, 
+                           fixedColumns = list(leftColumns= 4))) %>%  
+    formatStyle('id', 'DaysSinceMax90', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))) %>%  
+    formatStyle('DaysSinceMax90', 'DaysSinceMax90', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))) %>%
+    formatStyle('DaysSinceMax80', 'DaysSinceMax80', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))) %>% 
+    formatStyle('Max.Velocity', background =  styleColorBar(range(SpeedData_table$Max.Velocity), 'lightblue')) 
 })
 
 ```
