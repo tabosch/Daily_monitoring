@@ -54,61 +54,83 @@ catdata <- read.csv("catdata.csv")
 ```
 
 ```{r include=FALSE }
-catdata$Date <- as.Date(catdata$Date, format ="%m/%d/%y")
- catdata$Week <- lubridate::isoweek(ymd(catdata$Date))
-catdata$day <- weekdays(as.Date(catdata$Date))
-  catdata$day <- as.factor(catdata$day)
-  catdata$day <- factor(catdata$day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"))
+catdata$Date <- lubridate::ymd(catdata$Date)
+catdata$Week <- lubridate::isoweek(catdata$Date)
+catdata$day <- lubridate::wday(catdata$Date, label = TRUE, abbr = FALSE)
+
 catdata$Duration_minutes <- 60 * 24 * as.numeric(times(catdata$Duration))
 catdata$Player_Load_minute <- catdata$Player.Load/catdata$Duration_minutes
 catdata$Meters_minute <- catdata$Odometer/catdata$Duration_minutes
+
 catdata <- transform(catdata, id=match(Player.Name, unique(Player.Name)))
-  catdata$id <- paste("Player", catdata$id, sep = "_")
+catdata$id <- paste("Player", catdata$id, sep = "_")
 
+# Include only session summary, non fitness session data
+Catapult_daily <- catdata %>% 
+  filter(Period.Number == 0, 
+         !Period.Name %in% c("Fitness ", "Fitness PM", "Fitness PM Session", "Fitness"))
 
- Catapult_daily <-
-  catdata %>%
-  filter(Period.Number < 1)
-Catapult_daily <-
-  Catapult_daily %>%
-  filter(Period.Name != "Fitness ")
-Catapult_daily <-
-  Catapult_daily %>%
-  filter(Period.Name != "Fitness PM")
-Catapult_daily <-
-  Catapult_daily %>%
-  filter(Period.Name != "Fitness PM Session")
-Catapult_daily <-
-  Catapult_daily %>%
-  filter(Period.Name != "Fitness")
-Catapult_daily$Period.Name <- ifelse(Catapult_daily$Period.Name == "-4Day", "-4 Day", as.character(Catapult_daily$Period.Name))
-Catapult_daily$Meters_scale <- ave(Catapult_daily$Odometer, Catapult_daily$Player.Name, FUN=scale)
-Catapult_daily$PL_scale <- ave(Catapult_daily$Player.Load, Catapult_daily$Player.Name,  FUN=scale)
-Catapult_daily$Type <- ifelse(Catapult_daily$Period.Name != "-6 Day" & Catapult_daily$Period.Name != "-5 Day" & Catapult_daily$Period.Name != "-4 Day" & Catapult_daily$Period.Name != "-3 Day" & Catapult_daily$Period.Name != "-2 Day" & Catapult_daily$Period.Name != "-1 Day" & Catapult_daily$Period.Name != "-2 Day Regen" & Catapult_daily$Period.Name != "-4 Day PM", "Match", as.character(Catapult_daily$Period.Name))
-cat_avg <- Catapult_daily %>% group_by(Player.Name, Type) %>% summarize(PLmean = mean(Player.Load, na.rm=T), PLsd = sd(Player.Load, na.rm=T))
-Catapult_daily <- setDF(setDT(Catapult_daily)[setDT(cat_avg), PLmean :=PLmean, on = c("Player.Name", "Type")])
-Catapult_daily <- setDF(setDT(Catapult_daily)[setDT(cat_avg), PLsd :=PLsd, on = c("Player.Name", "Type")])
-Catapult_daily$Total_Player.Load <- ave(Catapult_daily$Player.Load, Catapult_daily$Player.Name, Catapult_daily$Week, FUN=sum)
-Catapult_daily$Total_Distance <- ave(Catapult_daily$Odometer, Catapult_daily$Player.Name, Catapult_daily$Week, FUN=sum)
-Catapult_daily$HSR_Distance <- ave(Catapult_daily$Velocity.Band.5.Dist, Catapult_daily$Player.Name, Catapult_daily$Week, FUN=sum)
-Catapult_daily$Sprint_Distance <- ave(Catapult_daily$Velocity.Band.6.Dist, Catapult_daily$Player.Name, Catapult_daily$Week, FUN=sum)
+Catapult_daily <- Catapult_daily %>% 
+  group_by(Player.Name) %>%
+  mutate(Meters_scale = scale(Odometer),
+         PL_scale = scale(Player.Load)) %>%
+  ungroup()
+  
+Catapult_daily$Period.Name <- ifelse(Catapult_daily$Period.Name == "-4Day", "-4 Day", Catapult_daily$Period.Name)
+
+Catapult_daily$Type <- ifelse(Catapult_daily$Period.Name %in% c("-6 Day", 
+                                                                "-5 Day", 
+                                                                "-4 Day", 
+                                                                "-3 Day", 
+                                                                "-2 Day", 
+                                                                "-1 Day", 
+                                                                "-2 Day Regen", 
+                                                                "-4 Day PM"), 
+                              Catapult_daily$Period.Name, 
+                              "Match")
+
+Catapult_daily <- Catapult_daily %>%
+  group_by(Player.Name, Type) %>%
+  mutate(PLmean = mean(Player.Load, na.rm = T),
+         PLsd = sd(Player.Load, na.rm = T)) %>%
+  ungroup()
+
+Catapult_daily <- Catapult_daily %>% 
+  group_by(Player.Name, Week) %>%
+  mutate(Total_Player.Load = sum(Player.Load),
+         Total_Distance = sum(Odometer),
+         HSR_Distance = sum(Velocity.Band.5.Dist),
+         Sprint_Distance = sum(Velocity.Band.6.Dist)) %>%
+  ungroup()
+
 Catapult_daily$Percent_HSR <- Catapult_daily$Sprint_Distance/Catapult_daily$Total_Distance *100
 Catapult_daily$min_day_week <- ave(Catapult_daily$Date, Catapult_daily$Week, FUN=min)
 Catapult_daily$max_day_week <- ave(Catapult_daily$Date, Catapult_daily$Week, FUN=max)
 Catapult_daily$Week2 <- paste(Catapult_daily$min_day_week, Catapult_daily$max_day_week, sep="-")
+
 Catapult_daily_today <- Catapult_daily %>% filter(Date==max(Date))
-Catapult_daily_mean <- Catapult_daily %>% group_by(Date, Type, Period.Name, Week) %>% summarize(Player_Load_mean = mean(Player.Load, na.rm=T), Player_Load_max = max(Player.Load, na.rm=T), Total_distance_mean = mean(Odometer, na.rm=T), Total_distance_max = max(Odometer, na.rm=T), Meters_minute_mean = mean(Meters_minute, na.rm=T), Meters_minute_max = max(Meters_minute, na.rm=T), PL_scale = mean(PL_scale, na.rm=T), Meters_scale = mean(Meters_scale, na.rm=T), PLmean = mean(PLmean, na.rm=T), PLsd = mean(PLsd, na.rm=T))
 
+Catapult_daily_mean <- Catapult_daily %>% 
+  group_by(Date, Type, Period.Name, Week) %>% 
+  summarize(Player_Load_mean = mean(Player.Load, na.rm=T), 
+            Player_Load_max = max(Player.Load, na.rm=T), 
+            Total_distance_mean = mean(Odometer, na.rm=T), 
+            Total_distance_max = max(Odometer, na.rm=T), 
+            Meters_minute_mean = mean(Meters_minute, na.rm=T), 
+            Meters_minute_max = max(Meters_minute, na.rm=T), 
+            PL_scale = mean(PL_scale, na.rm=T), 
+            Meters_scale = mean(Meters_scale, na.rm=T), 
+            PLmean = mean(PLmean, na.rm=T), 
+            PLsd = mean(PLsd, na.rm=T))
+
+```
+
+```{r load_other_data, include=FALSE, cache=TRUE}
 drills_compare <- read.csv("drills_compare.csv")
-
 Soccer_data <- read.csv("Soccer_data_final_reg_season.csv")
 Soccer_data <- Soccer_data[,c(2:26)]
-
 Passing <- read.csv("passing_data_final_reg_season.csv")
-
- ACWR_Solver <- read.csv("ACWR_Solver.csv")
- 
- 
+ACWR_Solver <- read.csv("ACWR_Solver.csv")
 Passing2 <- read.csv("Passing_2018.csv") 
 colnames(Passing2)[5] <- "Club"
 ```
