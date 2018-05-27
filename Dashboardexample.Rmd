@@ -405,18 +405,32 @@ Column {.tabset}
 -------------------
 
 ### Drill Intensity
-```{r,echo=FALSE}
+
+<h3>Date</h3>
+```{r}
+latest_gps_date <- max(catdata$Date)
+
+gps_date_format <- "%b %d %Y"
+last_30_gps_dates <- head(unique(format(sort(catdata$Date, decreasing = TRUE), format = gps_date_format)), 30)
+selectInput("gps_date", NULL, last_30_gps_dates, selected = format(latest_gps_date, format=gps_date_format))
+```
+
+```{r, include=FALSE}
+gps_date <- reactive({
+  mdy(input$gps_date)
+})
+```
+
+```{r, echo=FALSE, fig.height=1000}
 renderPlot({
   
   # Dataset is all specific drill data on the GPS Date
-  gps_date <- max(catdata$Date)
-  data <- catdata %>% filter(Position %in% c("F", "M", "D"), Date >= gps_date, Period.Number > 0)
+  data <- catdata %>% filter(Position %in% c("F", "M", "D"), Date == gps_date(), Period.Number > 0)
   
   ggplot(data, aes(reorder(Period.Name, Period.Number), reorder(Player.Name, Player.Load), fill=Meters_minute)) + 
     geom_tile() +
     scale_fill_gradient2(low="yellow", mid="green", high="red") +
     theme_minimal() +
-    theme(axis.text.x= element_text(angle=45, hjust = 1)) +
     labs(x=NULL, y= NULL)
 })
 ```
