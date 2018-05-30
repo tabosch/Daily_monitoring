@@ -76,7 +76,7 @@ Catapult_daily <- Catapult_daily %>%
          PL_scale = scale(Player.Load)) %>%
   ungroup()
   
-Catapult_daily$Period.Name <- ifelse(Catapult_daily$Period.Name == "-4Day", "-4 Day", Catapult_daily$Period.Name)
+levels(Catapult_daily$Period.Name) <- gsub("-4Day","-4 Day", levels(Catapult_daily$Period.Name))
 
 Catapult_daily$Type <- ifelse(Catapult_daily$Period.Name %in% c("-6 Day", 
                                                                 "-5 Day", 
