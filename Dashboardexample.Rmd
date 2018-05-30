@@ -138,8 +138,8 @@ colnames(Passing2)[5] <- "Club"
 Wellness
 ================================================
 
-Row (data-width = 1500)
---------------------------------
+Column {.sidebar}
+-------------------
 
 <h3>Date</h3>
 ```{r}
@@ -198,7 +198,7 @@ renderUI({
 ```
 </div>
 
-Row {.tabset}
+Column {.tabset}
 ----------------------------
 
 ###Wellness 
@@ -399,12 +399,10 @@ renderUI({
 
 
 Coaches Report
-===================
+================================================
 
-Column {.tabset}
+Column {.sidebar}
 -------------------
-
-### Drill Intensity
 
 <h3>Date</h3>
 ```{r}
@@ -421,6 +419,11 @@ gps_date <- reactive({
 })
 ```
 
+
+Column {.tabset}
+-------------------
+
+###Drill Intensity
 ```{r, echo=FALSE, fig.height=1000}
 renderPlot({
   
@@ -431,6 +434,7 @@ renderPlot({
     geom_tile() +
     scale_fill_gradient2(low="yellow", mid="green", high="red") +
     theme_minimal() +
+    theme(axis.text.x= element_text(angle=45, hjust = 1)) +
     labs(x=NULL, y= NULL)
 })
 ```
