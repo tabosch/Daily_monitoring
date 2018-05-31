@@ -413,7 +413,7 @@ last_30_gps_dates <- head(unique(format(sort(catdata$Date, decreasing = TRUE), f
 selectInput("gps_date", NULL, last_30_gps_dates, selected = format(latest_gps_date, format=gps_date_format))
 ```
 
-<h3>Metric</h3>
+<h3>Workload Metric</h3>
 ```{r}
 intensity_metrics <- c("Player Load" = "Player.Load", 
                        "Total Distance" = "Odometer", 
