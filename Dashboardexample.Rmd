@@ -699,7 +699,7 @@ selectInput("acr_workload_metric", NULL, workload_metrics, selected = head(workl
 
 <h3>Chronic Period</h3>
 ```{r}
-chronic_periods <- c("28 Days" = 28, "21 Days" = 21, "14 Days" = 14)
+chronic_periods <- c("28 Days" = 28, "21 Days" = 21)
 selectInput("acr_chronic_period", NULL, chronic_periods, selected = head(chronic_periods,1))
 ```
 
@@ -739,7 +739,7 @@ acr_data <- reactive({
 })
 ```
 
-### Acute Workload
+### Acute Workload v Acute/Chronic Ratio
 ``` {r, echo = FALSE} 
 renderPlot({
   
@@ -763,6 +763,89 @@ renderPlot({
     labs(x = "Week #", y = "Acute Workload")
 })
 ```
+
+
+
+
+
+***
+Exposure {data-navmenu="Player Report"}
+==================================================
+
+Column {.sidebar}
+-------------------
+  
+###Player Select
+```{r,echo=FALSE}
+athletes <- sort(unique(Catapult_daily$id))
+selectInput("exposure_athlete", "Select Athlete", athletes, selected = head(athletes,1))
+```
+
+<h3>Workload Metric</h3>
+```{r}
+workload_metrics <- c("Player Load" = "Player.Load", 
+                       "Total Distance" = "Odometer", 
+                       "Meters per Minute" = "Meters_minute")
+
+selectInput("exposure_workload_metric", NULL, workload_metrics, selected = head(workload_metrics,1))
+```
+
+
+Column  {data-width=500}
+---------------------------------
+
+``` {r, include = FALSE}
+exposure_data <- reactive({
+  workload_metric <- input$exposure_workload_metric
+  athlete_id <- input$exposure_athlete
+  
+  gps_date <- max(Catapult_daily$Date)
+  
+  start_date <- gps_date - lubridate::days(180)
+  
+  data <- Catapult_daily %>% 
+    filter(id == athlete_id, 
+           Date > start_date, Date <= gps_date,
+           Period.Number == 0) %>%
+    select_at(vars("Date", workload_metric))
+  
+  all_dates <- data.frame(Date = seq.Date(min(data$Date), max(data$Date), by = "day"))
+  
+  data <- merge(all_dates, data, all.x = TRUE)
+  data[,workload_metric] <- data[,workload_metric] %>% replace_na(0)
+  
+  data %>%
+    group_by(Date) %>% 
+    summarise_at(vars(workload_metric), funs(workload_metric = sum))
+})
+```
+
+### Exposure
+``` {r, echo = FALSE} 
+renderPlot({
+  
+  
+  print(exposure_data())
+  workload_metric <- input$exposure_workload_metric
+  
+  exposure_data() %>%
+      mutate(
+        week_date = ceiling(day(Date) /7),
+        months = lubridate::month(Date, label = TRUE),
+        week_days = lubridate::wday(Date, label = TRUE)) %>% 
+      group_by(week_date, months, week_days) %>%
+      summarise_at(vars(workload_metric), funs(total = sum)) %>%
+      ggplot(aes(week_days, week_date, fill = total)) +
+      geom_tile(colour = "white") + 
+      facet_wrap(~months) +
+      theme_bw() +
+      scale_fill_gradient(low = "#39a78e", high = "#a73952", name = workload_metric) + 
+      labs(x = "Week of the Month", y = "Weekday") + 
+      scale_y_continuous(trans = "reverse", name = "boom")
+})
+```
+***
+
 
 Daily and Running Totals {data-navmenu="Monitoring"}
 ==================================================
