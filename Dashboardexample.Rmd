@@ -413,10 +413,20 @@ last_30_gps_dates <- head(unique(format(sort(catdata$Date, decreasing = TRUE), f
 selectInput("gps_date", NULL, last_30_gps_dates, selected = format(latest_gps_date, format=gps_date_format))
 ```
 
+<h3>Metric</h3>
+```{r}
+intensity_metrics <- c("Player Load" = "Player.Load", 
+                       "Total Distance" = "Odometer", 
+                       "Meters per Minute" = "Meters_minute")
+
+selectInput("intensity_metric", NULL, intensity_metrics, selected = head(intensity_metrics,1))
+```
+
 ```{r, include=FALSE}
 gps_date <- reactive({
   mdy(input$gps_date)
 })
+
 ```
 
 
@@ -426,11 +436,18 @@ Column {.tabset}
 ###Drill Intensity
 ```{r, echo=FALSE, fig.height=1000}
 renderPlot({
+  library(forcats)
   
   # Dataset is all specific drill data on the GPS Date
-  data <- catdata %>% filter(Position %in% c("F", "M", "D"), Date == gps_date(), Period.Number > 0)
+  data <- catdata %>% 
+    filter(Position %in% c("F", "M", "D"), Date == gps_date(), Period.Number > 0)
+
+  intensity_metric <- input$intensity_metric
   
-  ggplot(data, aes(reorder(Period.Name, Period.Number), reorder(Player.Name, Player.Load), fill=Meters_minute)) + 
+  data$Period.Name <- fct_reorder(data$Period.Name, data$Period.Number)
+  data$Player.Name <- fct_reorder(data$Player.Name, data[,intensity_metric])
+  
+  ggplot(data, aes_string("Period.Name","Player.Name", fill=intensity_metric)) + 
     geom_tile() +
     scale_fill_gradient2(low="yellow", mid="green", high="red") +
     theme_minimal() +
