@@ -824,24 +824,23 @@ exposure_data <- reactive({
 ``` {r, echo = FALSE} 
 renderPlot({
   
-  
-  print(exposure_data())
   workload_metric <- input$exposure_workload_metric
   
-  exposure_data() %>%
+  data <- exposure_data() %>%
       mutate(
         week_date = ceiling(day(Date) /7),
         months = lubridate::month(Date, label = TRUE),
         week_days = lubridate::wday(Date, label = TRUE)) %>% 
       group_by(week_date, months, week_days) %>%
-      summarise_at(vars(workload_metric), funs(total = sum)) %>%
-      ggplot(aes(week_days, week_date, fill = total)) +
+      summarise_at(vars(workload_metric), funs(total = sum))
+  
+  ggplot(data, aes(week_days, week_date, fill = total)) +
       geom_tile(colour = "white") + 
       facet_wrap(~months) +
       theme_bw() +
       scale_fill_gradient(low = "#39a78e", high = "#a73952", name = workload_metric) + 
-      labs(x = "Week of the Month", y = "Weekday") + 
-      scale_y_continuous(trans = "reverse", name = "boom")
+      scale_y_continuous(trans = "reverse") +
+      labs(x = NULL, y = NULL)
 })
 ```
 ***
