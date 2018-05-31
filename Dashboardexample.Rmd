@@ -535,8 +535,8 @@ Column {.sidebar}
   
 ###Player Select
 ```{r,echo=FALSE}
-
-selectInput("Player_report", "Select Athlete", catdata$id, selected = catdata$id[[8]])
+athletes <- sort(unique(Catapult_daily$id))
+selectInput("Player_report", "Select Athlete", athletes, selected = head(athletes,1))
 ```
 
 Column  {data-width=500}
