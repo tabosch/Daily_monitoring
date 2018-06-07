@@ -527,9 +527,10 @@ renderDataTable({
 ```
 
 
-Player Report
-====================
-  
+Loading {data-navmenu="Player Report"}
+==================================================
+
+
 Column {.sidebar}
 -------------------
   
@@ -544,8 +545,6 @@ Column  {data-width=500}
   
 ### Daily Load
 ```{r, echo=FALSE}
-
-
 
 barplot1 <- reactive({
   player_drills <- catdata %>%
@@ -675,6 +674,176 @@ renderPrint({
 ```
 </div>
 
+
+
+Acute Chronic Ratio {data-navmenu="Player Report"}
+==================================================
+
+Column {.sidebar}
+-------------------
+  
+###Player Select
+```{r,echo=FALSE}
+athletes <- sort(unique(Catapult_daily$id))
+selectInput("acr_athlete", "Select Athlete", athletes, selected = head(athletes,1))
+```
+
+<h3>Workload Metric</h3>
+```{r}
+workload_metrics <- c("Player Load" = "Player.Load", 
+                       "Total Distance" = "Odometer", 
+                       "Meters per Minute" = "Meters_minute")
+
+selectInput("acr_workload_metric", NULL, workload_metrics, selected = head(workload_metrics,1))
+```
+
+<h3>Chronic Period</h3>
+```{r}
+chronic_periods <- c("28 Days" = 28, "21 Days" = 21)
+selectInput("acr_chronic_period", NULL, chronic_periods, selected = head(chronic_periods,1))
+```
+
+Column  {data-width=500}
+---------------------------------
+
+``` {r, include = FALSE}
+acr_data <- reactive({
+  acute_period <- 7
+  chronic_period <- as.numeric(input$acr_chronic_period)
+  workload_metric <- input$acr_workload_metric
+  athlete_id <- input$acr_athlete
+  
+  gps_date <- max(Catapult_daily$Date)
+  
+  start_date <- gps_date - lubridate::days(chronic_period*3)
+  
+  data <- Catapult_daily %>% 
+    filter(id == athlete_id, 
+           Date > start_date, Date <= gps_date,
+           Period.Number == 0) %>%
+    select_at(vars("Date", workload_metric))
+  
+  all_dates <- data.frame(Date = seq.Date(min(data$Date), max(data$Date), by = "day"))
+  
+  data <- merge(all_dates, data, all.x = TRUE)
+  data[,workload_metric] <- data[,workload_metric] %>% replace_na(0)
+  
+  data <- data %>% mutate(week = lubridate::week(Date))
+  
+  data %>%
+    group_by(week) %>% 
+    summarise_at(vars(workload_metric), funs(acute = sum)) %>%
+    mutate(chronic = zoo::rollmean(acute, chronic_period/7, fill = NA, align = "right"),
+           acr = (acute / chronic))
+  
+})
+```
+
+### Acute Workload v Acute/Chronic Ratio
+``` {r, echo = FALSE} 
+renderPlot({
+  
+  data <- acr_data()
+  max_acr <- max(data$acr, na.rm = TRUE)
+  max_acute <- max(data$acute, na.rm = TRUE)
+
+  ggplot(data) +
+    geom_bar(aes(week, acute), stat = "identity", colour = gray(0.5), fill = gray(0.5), alpha = 0.5) + 
+    geom_point(aes(week, acr * (max_acute/max_acr)), size = 3, shape = 21, fill = "white") +
+    geom_line(aes(week,acr  * (max_acute/max_acr)), color = "blue") +
+    scale_y_continuous(
+      name = "Acute Workload",
+      sec.axis = sec_axis(~ . * (max_acr/max_acute), name = "A/C Ratio")) +
+    scale_x_continuous(breaks = seq(min(data$week), max(data$week))) +
+    theme_minimal() +
+    theme(
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank()
+    ) +
+    labs(x = "Week #", y = "Acute Workload")
+})
+```
+
+
+
+
+
+***
+Exposure {data-navmenu="Player Report"}
+==================================================
+
+Column {.sidebar}
+-------------------
+  
+###Player Select
+```{r,echo=FALSE}
+athletes <- sort(unique(Catapult_daily$id))
+selectInput("exposure_athlete", "Select Athlete", athletes, selected = head(athletes,1))
+```
+
+<h3>Workload Metric</h3>
+```{r}
+workload_metrics <- c("Player Load" = "Player.Load", 
+                       "Total Distance" = "Odometer", 
+                       "Meters per Minute" = "Meters_minute")
+
+selectInput("exposure_workload_metric", NULL, workload_metrics, selected = head(workload_metrics,1))
+```
+
+
+Column  {data-width=500}
+---------------------------------
+
+``` {r, include = FALSE}
+exposure_data <- reactive({
+  workload_metric <- input$exposure_workload_metric
+  athlete_id <- input$exposure_athlete
+  
+  gps_date <- max(Catapult_daily$Date)
+  
+  start_date <- gps_date - lubridate::days(180)
+  
+  data <- Catapult_daily %>% 
+    filter(id == athlete_id, 
+           Date > start_date, Date <= gps_date,
+           Period.Number == 0) %>%
+    select_at(vars("Date", workload_metric))
+  
+  all_dates <- data.frame(Date = seq.Date(min(data$Date), max(data$Date), by = "day"))
+  
+  data <- merge(all_dates, data, all.x = TRUE)
+  data[,workload_metric] <- data[,workload_metric] %>% replace_na(0)
+  
+  data %>%
+    group_by(Date) %>% 
+    summarise_at(vars(workload_metric), funs(workload_metric = sum))
+})
+```
+
+### Exposure
+``` {r, echo = FALSE} 
+renderPlot({
+  
+  workload_metric <- input$exposure_workload_metric
+  
+  data <- exposure_data() %>%
+      mutate(
+        week_date = ceiling(day(Date) /7),
+        months = lubridate::month(Date, label = TRUE),
+        week_days = lubridate::wday(Date, label = TRUE)) %>% 
+      group_by(week_date, months, week_days) %>%
+      summarise_at(vars(workload_metric), funs(total = sum))
+  
+  ggplot(data, aes(week_days, week_date, fill = total)) +
+      geom_tile(colour = "white") + 
+      facet_wrap(~months) +
+      theme_bw() +
+      scale_fill_gradient(low = "#39a78e", high = "#a73952", name = workload_metric) + 
+      scale_y_continuous(trans = "reverse") +
+      labs(x = NULL, y = NULL)
+})
+```
+***
 
 
 Daily and Running Totals {data-navmenu="Monitoring"}
