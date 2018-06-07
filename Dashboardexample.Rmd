@@ -54,61 +54,83 @@ catdata <- read.csv("catdata.csv")
 ```
 
 ```{r include=FALSE }
-catdata$Date <- as.Date(catdata$Date, format ="%m/%d/%y")
- catdata$Week <- lubridate::isoweek(ymd(catdata$Date))
-catdata$day <- weekdays(as.Date(catdata$Date))
-  catdata$day <- as.factor(catdata$day)
-  catdata$day <- factor(catdata$day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"))
+catdata$Date <- lubridate::ymd(catdata$Date)
+catdata$Week <- lubridate::isoweek(catdata$Date)
+catdata$day <- lubridate::wday(catdata$Date, label = TRUE, abbr = FALSE)
+
 catdata$Duration_minutes <- 60 * 24 * as.numeric(times(catdata$Duration))
 catdata$Player_Load_minute <- catdata$Player.Load/catdata$Duration_minutes
 catdata$Meters_minute <- catdata$Odometer/catdata$Duration_minutes
+
 catdata <- transform(catdata, id=match(Player.Name, unique(Player.Name)))
-  catdata$id <- paste("Player", catdata$id, sep = "_")
+catdata$id <- paste("Player", catdata$id, sep = "_")
 
+# Include only session summary, non fitness session data
+Catapult_daily <- catdata %>% 
+  filter(Period.Number == 0, 
+         !Period.Name %in% c("Fitness ", "Fitness PM", "Fitness PM Session", "Fitness"))
 
- Catapult_daily <-
-  catdata %>%
-  filter(Period.Number < 1)
-Catapult_daily <-
-  Catapult_daily %>%
-  filter(Period.Name != "Fitness ")
-Catapult_daily <-
-  Catapult_daily %>%
-  filter(Period.Name != "Fitness PM")
-Catapult_daily <-
-  Catapult_daily %>%
-  filter(Period.Name != "Fitness PM Session")
-Catapult_daily <-
-  Catapult_daily %>%
-  filter(Period.Name != "Fitness")
-Catapult_daily$Period.Name <- ifelse(Catapult_daily$Period.Name == "-4Day", "-4 Day", as.character(Catapult_daily$Period.Name))
-Catapult_daily$Meters_scale <- ave(Catapult_daily$Odometer, Catapult_daily$Player.Name, FUN=scale)
-Catapult_daily$PL_scale <- ave(Catapult_daily$Player.Load, Catapult_daily$Player.Name,  FUN=scale)
-Catapult_daily$Type <- ifelse(Catapult_daily$Period.Name != "-6 Day" & Catapult_daily$Period.Name != "-5 Day" & Catapult_daily$Period.Name != "-4 Day" & Catapult_daily$Period.Name != "-3 Day" & Catapult_daily$Period.Name != "-2 Day" & Catapult_daily$Period.Name != "-1 Day" & Catapult_daily$Period.Name != "-2 Day Regen" & Catapult_daily$Period.Name != "-4 Day PM", "Match", as.character(Catapult_daily$Period.Name))
-cat_avg <- Catapult_daily %>% group_by(Player.Name, Type) %>% summarize(PLmean = mean(Player.Load, na.rm=T), PLsd = sd(Player.Load, na.rm=T))
-Catapult_daily <- setDF(setDT(Catapult_daily)[setDT(cat_avg), PLmean :=PLmean, on = c("Player.Name", "Type")])
-Catapult_daily <- setDF(setDT(Catapult_daily)[setDT(cat_avg), PLsd :=PLsd, on = c("Player.Name", "Type")])
-Catapult_daily$Total_Player.Load <- ave(Catapult_daily$Player.Load, Catapult_daily$Player.Name, Catapult_daily$Week, FUN=sum)
-Catapult_daily$Total_Distance <- ave(Catapult_daily$Odometer, Catapult_daily$Player.Name, Catapult_daily$Week, FUN=sum)
-Catapult_daily$HSR_Distance <- ave(Catapult_daily$Velocity.Band.5.Dist, Catapult_daily$Player.Name, Catapult_daily$Week, FUN=sum)
-Catapult_daily$Sprint_Distance <- ave(Catapult_daily$Velocity.Band.6.Dist, Catapult_daily$Player.Name, Catapult_daily$Week, FUN=sum)
+Catapult_daily <- Catapult_daily %>% 
+  group_by(Player.Name) %>%
+  mutate(Meters_scale = scale(Odometer),
+         PL_scale = scale(Player.Load)) %>%
+  ungroup()
+  
+levels(Catapult_daily$Period.Name) <- gsub("-4Day","-4 Day", levels(Catapult_daily$Period.Name))
+
+Catapult_daily$Type <- ifelse(Catapult_daily$Period.Name %in% c("-6 Day", 
+                                                                "-5 Day", 
+                                                                "-4 Day", 
+                                                                "-3 Day", 
+                                                                "-2 Day", 
+                                                                "-1 Day", 
+                                                                "-2 Day Regen", 
+                                                                "-4 Day PM"), 
+                              Catapult_daily$Period.Name, 
+                              "Match")
+
+Catapult_daily <- Catapult_daily %>%
+  group_by(Player.Name, Type) %>%
+  mutate(PLmean = mean(Player.Load, na.rm = T),
+         PLsd = sd(Player.Load, na.rm = T)) %>%
+  ungroup()
+
+Catapult_daily <- Catapult_daily %>% 
+  group_by(Player.Name, Week) %>%
+  mutate(Total_Player.Load = sum(Player.Load),
+         Total_Distance = sum(Odometer),
+         HSR_Distance = sum(Velocity.Band.5.Dist),
+         Sprint_Distance = sum(Velocity.Band.6.Dist)) %>%
+  ungroup()
+
 Catapult_daily$Percent_HSR <- Catapult_daily$Sprint_Distance/Catapult_daily$Total_Distance *100
 Catapult_daily$min_day_week <- ave(Catapult_daily$Date, Catapult_daily$Week, FUN=min)
 Catapult_daily$max_day_week <- ave(Catapult_daily$Date, Catapult_daily$Week, FUN=max)
 Catapult_daily$Week2 <- paste(Catapult_daily$min_day_week, Catapult_daily$max_day_week, sep="-")
+
 Catapult_daily_today <- Catapult_daily %>% filter(Date==max(Date))
-Catapult_daily_mean <- Catapult_daily %>% group_by(Date, Type, Period.Name, Week) %>% summarize(Player_Load_mean = mean(Player.Load, na.rm=T), Player_Load_max = max(Player.Load, na.rm=T), Total_distance_mean = mean(Odometer, na.rm=T), Total_distance_max = max(Odometer, na.rm=T), Meters_minute_mean = mean(Meters_minute, na.rm=T), Meters_minute_max = max(Meters_minute, na.rm=T), PL_scale = mean(PL_scale, na.rm=T), Meters_scale = mean(Meters_scale, na.rm=T), PLmean = mean(PLmean, na.rm=T), PLsd = mean(PLsd, na.rm=T))
 
+Catapult_daily_mean <- Catapult_daily %>% 
+  group_by(Date, Type, Period.Name, Week) %>% 
+  summarize(Player_Load_mean = mean(Player.Load, na.rm=T), 
+            Player_Load_max = max(Player.Load, na.rm=T), 
+            Total_distance_mean = mean(Odometer, na.rm=T), 
+            Total_distance_max = max(Odometer, na.rm=T), 
+            Meters_minute_mean = mean(Meters_minute, na.rm=T), 
+            Meters_minute_max = max(Meters_minute, na.rm=T), 
+            PL_scale = mean(PL_scale, na.rm=T), 
+            Meters_scale = mean(Meters_scale, na.rm=T), 
+            PLmean = mean(PLmean, na.rm=T), 
+            PLsd = mean(PLsd, na.rm=T))
+
+```
+
+```{r load_other_data, include=FALSE, cache=TRUE}
 drills_compare <- read.csv("drills_compare.csv")
-
 Soccer_data <- read.csv("Soccer_data_final_reg_season.csv")
 Soccer_data <- Soccer_data[,c(2:26)]
-
 Passing <- read.csv("passing_data_final_reg_season.csv")
-
- ACWR_Solver <- read.csv("ACWR_Solver.csv")
- 
- 
+ACWR_Solver <- read.csv("ACWR_Solver.csv")
 Passing2 <- read.csv("Passing_2018.csv") 
 colnames(Passing2)[5] <- "Club"
 ```
@@ -116,8 +138,8 @@ colnames(Passing2)[5] <- "Club"
 Wellness
 ================================================
 
-Row (data-width = 1500)
---------------------------------
+Column {.sidebar}
+-------------------
 
 <h3>Date</h3>
 ```{r}
@@ -176,7 +198,7 @@ renderUI({
 ```
 </div>
 
-Row {.tabset}
+Column {.tabset}
 ----------------------------
 
 ###Wellness 
@@ -377,31 +399,88 @@ renderUI({
 
 
 Coaches Report
-===================
+================================================
+
+Column {.sidebar}
+-------------------
+
+<h3>Date</h3>
+```{r}
+latest_gps_date <- max(catdata$Date)
+
+gps_date_format <- "%b %d %Y"
+last_30_gps_dates <- head(unique(format(sort(catdata$Date, decreasing = TRUE), format = gps_date_format)), 30)
+selectInput("gps_date", NULL, last_30_gps_dates, selected = format(latest_gps_date, format=gps_date_format))
+```
+
+<h3>Workload Metric</h3>
+```{r}
+intensity_metrics <- c("Player Load" = "Player.Load", 
+                       "Total Distance" = "Odometer", 
+                       "Meters per Minute" = "Meters_minute")
+
+selectInput("intensity_metric", NULL, intensity_metrics, selected = head(intensity_metrics,1))
+```
+
+```{r, include=FALSE}
+gps_date <- reactive({
+  mdy(input$gps_date)
+})
+
+```
+
 
 Column {.tabset}
 -------------------
 
-###Player Report
-```{r,echo=FALSE}
+###Drill Intensity
+```{r, echo=FALSE, fig.height=1000}
 renderPlot({
+  library(forcats)
+  
+  # Dataset is all specific drill data on the GPS Date
+  data <- catdata %>% 
+    filter(Position %in% c("F", "M", "D"), Date == gps_date(), Period.Number > 0)
 
-ggplot(data=subset(catdata, Position %in% c("F", "M", "D") & Date >= max(Date) & Period.Number > 0), aes(reorder(Period.Name, Period.Number), Player.Load, fill=Meters_minute))+geom_bar(stat="identity")+facet_wrap(~id)+geom_text(aes(y=5,label=Period.Name), angle=90, hjust=-.1, size=3)+theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank())+scale_fill_gradient2(low="yellow", mid="green", high="red")
+  intensity_metric <- input$intensity_metric
+  
+  data$Period.Name <- fct_reorder(data$Period.Name, data$Period.Number)
+  data$Player.Name <- fct_reorder(data$Player.Name, data[,intensity_metric])
+  
+  ggplot(data, aes_string("Period.Name","Player.Name", fill=intensity_metric)) + 
+    geom_tile() +
+    scale_fill_gradient2(low="yellow", mid="green", high="red") +
+    theme_minimal() +
+    theme(axis.text.x= element_text(angle=45, hjust = 1)) +
+    labs(x=NULL, y= NULL)
 })
 ```
-
 
 ###ACR Table
 
 ```{r, echo=FALSE}
 renderDataTable({
   ACWR_Solver$ACR_weighted <- round(ACWR_Solver$ACR_weighted, 2)
-  datatable(ACWR_Solver,extensions= c('Scroller', 'FixedColumns'), options = list(
-    scrollY = 400, paging = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns= 1)), rownames = FALSE)%>%  
-    formatStyle('Player.Load', background =  styleColorBar(range(ACWR_Solver$Player.Load) , 'lightblue'),  backgroundSize = '95% 50%', backgroundRepeat = 'no-repeat', backgroundPosition = 'center') %>%  
-    formatStyle('Odometer', background =  styleColorBar(range(ACWR_Solver$Odometer), 'lightblue'),  backgroundSize = '95% 50%', backgroundRepeat = 'no-repeat',backgroundPosition = 'center') %>%  formatStyle('ACR_weighted', 'ACR_weighted', backgroundColor = styleInterval(c(0.8,1.3), c('yellow', 'green', 'red')))
+  
+  datatable(ACWR_Solver,
+            extensions= c('Scroller', 'FixedColumns'), 
+            options = list(scrollY = 400, 
+                           paging = TRUE, 
+                           scrollX = TRUE, 
+                           fixedColumns = list(leftColumns= 1)), 
+            rownames = FALSE) %>% 
+    formatStyle('Player.Load', 
+                background =  styleColorBar(range(ACWR_Solver$Player.Load) , 'lightblue'),  
+                backgroundSize = '95% 50%', 
+                backgroundRepeat = 'no-repeat', 
+                backgroundPosition = 'center') %>%  
+    formatStyle('Odometer', 
+                background =  styleColorBar(range(ACWR_Solver$Odometer), 'lightblue'),  
+                backgroundSize = '95% 50%', 
+                backgroundRepeat = 'no-repeat',
+                backgroundPosition = 'center') %>%
+    formatStyle('ACR_weighted', 'ACR_weighted', 
+                backgroundColor = styleInterval(c(0.8,1.3), c('yellow', 'green', 'red')))
 })
 
 ```
@@ -410,34 +489,39 @@ renderDataTable({
 ```{r,echo=FALSE}
 renderDataTable({
   SeasonData <- catdata
-SeasonData2 <- SeasonData %>% filter(Period.Number < 1)
-SpeedData <- SeasonData2 %>% select (id, Date, Week, Max.Velocity, Velocity.Band.5.TotEff, Velocity.Band.6.TotEff)
-SpeedData <- SpeedData %>% group_by(id) %>% mutate(PercentOfMax = round(Max.Velocity/max(Max.Velocity)*100,1))
-SpeedData <- SpeedData %>% group_by(id) %>% mutate(DateofLastMax90 = max(Date[which(PercentOfMax>90)]),
+  SeasonData2 <- SeasonData %>% filter(Period.Number < 1)
+  SpeedData <- SeasonData2 %>% select (id, Date, Week, Max.Velocity, Velocity.Band.5.TotEff, Velocity.Band.6.TotEff)
+  SpeedData <- SpeedData %>% group_by(id) %>% mutate(PercentOfMax = round(Max.Velocity/max(Max.Velocity)*100,1))
+  SpeedData <- SpeedData %>% group_by(id) %>% mutate(DateofLastMax90 = max(Date[which(PercentOfMax>90)]),
                                                    DateofLastMax80 = max(Date[which(PercentOfMax>80)]),
                                                    DateOfLast80Effort = max(Date[which(Velocity.Band.5.TotEff >0)]),
                                                    DateOfLast90Effort = max(Date[which(Velocity.Band.6.TotEff >0)]))
 
-SpeedData_New <- SpeedData %>% filter(Date >= max(Date))
-SpeedData_New$DaysSinceMax90 <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
+
+  SpeedData_New <- SpeedData %>% filter(Date >= max(Date))
+  SpeedData_New$DaysSinceMax90 <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
   as.Date(as.character(SpeedData_New$DateofLastMax90), format="%Y-%m-%d")
-SpeedData_New$DaysSince90Effort <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
+  SpeedData_New$DaysSince90Effort <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
   as.Date(as.character(SpeedData_New$DateOfLast90Effort), format="%Y-%m-%d")
-SpeedData_New$DaysSinceMax80 <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
+  SpeedData_New$DaysSinceMax80 <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
   as.Date(as.character(SpeedData_New$DateofLastMax80), format="%Y-%m-%d")
-SpeedData_New$DaysSince80Effort <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
+  SpeedData_New$DaysSince80Effort <- as.Date(as.character(SpeedData_New$Date), format="%Y-%m-%d")-
   as.Date(as.character(SpeedData_New$DateOfLast80Effort), format="%Y-%m-%d")
-SpeedData_table <- SpeedData_New %>% filter(Date >="2017-10-12") %>% select(id, Date, Max.Velocity, DaysSinceMax90, DaysSince90Effort, DaysSinceMax80, DaysSince80Effort)
-SpeedData_table$Max.Velocity <- round(SpeedData_table$Max.Velocity, 2)
-datatable(SpeedData_table, extensions= c('Scroller', 'FixedColumns'), options = list(scrollY = 400, paging = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns= 4))
-) %>%  formatStyle('id', 'DaysSinceMax90', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))) %>%  formatStyle('DaysSinceMax90', 'DaysSinceMax90', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))
-) %>%  formatStyle('DaysSinceMax80', 'DaysSinceMax80', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))
-) %>%  formatStyle('Max.Velocity', background =  styleColorBar(range(SpeedData_table$Max.Velocity), 'lightblue')) 
+  SpeedData_table <- SpeedData_New %>% filter(Date >="2017-10-12") %>% select(id, Date, Max.Velocity, DaysSinceMax90, DaysSince90Effort, 
+                                                                              DaysSinceMax80, DaysSince80Effort)
 
+  SpeedData_table$Max.Velocity <- round(SpeedData_table$Max.Velocity, 2)
 
-
-
-  
+  datatable(SpeedData_table, 
+            extensions= c('Scroller', 'FixedColumns'), 
+            options = list(scrollY = 400, 
+                           paging = TRUE, 
+                           scrollX = TRUE, 
+                           fixedColumns = list(leftColumns= 4))) %>%  
+    formatStyle('id', 'DaysSinceMax90', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))) %>%  
+    formatStyle('DaysSinceMax90', 'DaysSinceMax90', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))) %>%
+    formatStyle('DaysSinceMax80', 'DaysSinceMax80', backgroundColor = styleInterval(c(3,7), c('green', 'yellow', 'red'))) %>% 
+    formatStyle('Max.Velocity', background =  styleColorBar(range(SpeedData_table$Max.Velocity), 'lightblue')) 
 })
 
 ```
@@ -451,8 +535,8 @@ Column {.sidebar}
   
 ###Player Select
 ```{r,echo=FALSE}
-
-selectInput("Player_report", "Select Athlete", catdata$id, selected = catdata$id[[8]])
+athletes <- sort(unique(Catapult_daily$id))
+selectInput("Player_report", "Select Athlete", athletes, selected = head(athletes,1))
 ```
 
 Column  {data-width=500}
