@@ -201,7 +201,7 @@ renderUI({
 Column {.tabset}
 ----------------------------
 
-###Wellness 
+### Wellness 
 
 ```{r, echo = FALSE, include = FALSE}
 daily_wellness_data <- reactive({
@@ -258,7 +258,7 @@ renderPlot({
 })
 ```
 
-###Running Team Avg Wellness Scaled
+### Running Team Avg Wellness Scaled
 ```{r, echo=FALSE, fig.height=20, fig.width=40}
 
 renderPlot({
@@ -298,7 +298,7 @@ renderPlot({
 ```
 
 
-###Differentiated RPE
+### Differentiated RPE
 ```{r, echo=FALSE, fig.height=25, fig.width=35}
 renderPlot({
   
@@ -433,7 +433,7 @@ gps_date <- reactive({
 Column {.tabset}
 -------------------
 
-###Drill Intensity
+### Drill Intensity
 ```{r, echo=FALSE, fig.height=1000}
 renderPlot({
   library(forcats)
@@ -456,7 +456,7 @@ renderPlot({
 })
 ```
 
-###ACR Table
+### ACR Table
 
 ```{r, echo=FALSE}
 renderDataTable({
@@ -485,7 +485,7 @@ renderDataTable({
 
 ```
 
-###Days Since Max Velocity
+### Days Since Max Velocity
 ```{r,echo=FALSE}
 renderDataTable({
   SeasonData <- catdata
@@ -534,7 +534,7 @@ Loading {data-navmenu="Player Report"}
 Column {.sidebar}
 -------------------
   
-###Player Select
+### Player Select
 ```{r,echo=FALSE}
 athletes <- sort(unique(Catapult_daily$id))
 selectInput("Player_report", "Select Athlete", athletes, selected = head(athletes,1))
@@ -562,7 +562,7 @@ renderPlot({
 
 ```
 
-###Loading
+### Loading
 ```{r, echo=FALSE,}
 
 barplot2 <- reactive({
@@ -607,7 +607,7 @@ renderPlot({
 ```
 
 
-###Distance Covered 
+### Distance Covered 
 ```{r, echo=FALSE}
 barplot4 <- reactive({
   plot4 <-
@@ -682,7 +682,7 @@ Acute Chronic Ratio {data-navmenu="Player Report"}
 Column {.sidebar}
 -------------------
   
-###Player Select
+### Player Select
 ```{r,echo=FALSE}
 athletes <- sort(unique(Catapult_daily$id))
 selectInput("acr_athlete", "Select Athlete", athletes, selected = head(athletes,1))
@@ -775,7 +775,7 @@ Exposure {data-navmenu="Player Report"}
 Column {.sidebar}
 -------------------
   
-###Player Select
+### Player Select
 ```{r,echo=FALSE}
 athletes <- sort(unique(Catapult_daily$id))
 selectInput("exposure_athlete", "Select Athlete", athletes, selected = head(athletes,1))
@@ -852,7 +852,7 @@ Daily and Running Totals {data-navmenu="Monitoring"}
 Column {.tabset}
 ------------------
 
-###Daily Load Comparison to Player Avg
+### Daily Load Comparison to Player Avg
 ```{r, echo=FALSE}
 
 renderPlotly({
@@ -865,7 +865,7 @@ ggplotly(b)
 })
 ```
 
-###Cumulative Team Load per day
+### Cumulative Team Load per day
 ```{r, echo=FALSE}
 
 renderPlot({
@@ -874,7 +874,7 @@ renderPlot({
 })
 ```
 
-###Avg Load per day
+### Avg Load per day
 ```{r, echo=FALSE}
 renderPlot({
  
@@ -898,7 +898,7 @@ selectInput("Type", "Type", choices = drills_compare$Type, selected = drills_com
 Column
 -----------
 
-###Player Load
+### Player Load
 ```{r, echo=FALSE}
 renderPlot({
  ggplot(data=subset(drills_compare, Type %in% input$Type), aes(reorder(Period.Name, Player_Load_minute), Player_Load_minute, fill=Meters_minute))+geom_bar(stat="identity")+scale_fill_gradient2(name="Meters/minute", low="green", mid="yellow", high="red", midpoint=50)+facet_wrap(~Type, scale="free")+coord_flip()+xlab("Drill Name")+ylab("Player Load/Minute")
@@ -932,7 +932,7 @@ checkboxGroupInput("player", "Athlete", choices = Player.Names$id, selected = Pl
 Column {.tabset}
 -----------------
 
-###Player Load
+### Player Load
 ```{r, echo=FALSE}
 renderPlot({
 
@@ -944,7 +944,7 @@ renderPlot({
 )
 ```
 
-###Total Distance adjusted for HSR
+### Total Distance adjusted for HSR
 ```{r, echo=FALSE}
 
  renderPlot({
@@ -959,7 +959,7 @@ renderPlot({
 ```
 
 
-###HSR Distance adjusted for Sprint Distance
+### HSR Distance adjusted for Sprint Distance
 ```{r, echo=FALSE}
  renderPlot({
 
@@ -972,7 +972,7 @@ renderPlot({
 )
 ```
 
-###Max Velocity
+### Max Velocity
 ```{r, echo=FALSE}
  renderPlot({
   
@@ -1007,7 +1007,7 @@ Glossary: xGoals = expected goals; G_xGdiff = Difference between actual goals an
 Column {.tabset} 
 ---------------
 
-###Player Stat Tracker
+### Player Stat Tracker
 You can search by player or club then sort by the variable you want to look at.
 ```{r, echo=FALSE, fig.width=5, fig.height=10}
 renderPlot({
@@ -1023,7 +1023,7 @@ ggplot(filtered2_melt, aes(reorder(Name, value), value, fill = variable))+geom_b
 ```
 
 
-###Player Stat Tracker per 96 minutes
+### Player Stat Tracker per 96 minutes
 
 ```{r, echo=FALSE, fig.width=5, fig.height=10}
 renderPlot({
@@ -1063,7 +1063,7 @@ Glossary: xGoals = expected goals; G_xGdiff = Difference between actual goals an
 Column {.tabset} 
 ------------------
 
-###Attacking Specialists
+### Attacking Specialists
 
 ```{r, echo=FALSE, fig.width=4, fig.height=12}
 renderPlot({
@@ -1079,7 +1079,7 @@ ggplot(filtered_Playmakers, aes(xGoals_pShot, xA_pKP, label = Name))+geom_point(
 
 ```
 
-###Table
+### Table
 
 ```{r, echo=FALSE, fig.width=5, fig.height=10}
 renderDataTable({
@@ -1095,7 +1095,7 @@ renderDataTable({
 scrollY = '300px', paging = TRUE, scrollX = TRUE))
 ```
 
-###Goals versus Goal to expected Goal difference
+### Goals versus Goal to expected Goal difference
 
 ```{r, echo=FALSE, fig.width=5, fig.height=10}
 renderPlot({
@@ -1111,7 +1111,7 @@ ggplot(filtered_Playmakers, aes(Goals, G_xGdiff, label = Name))+geom_rect(data=N
 })
 ```
 
-###Shots versus xGoals per Shot
+### Shots versus xGoals per Shot
 
 ```{r, echo=FALSE, fig.width=5, fig.height=10}
 renderPlot({
@@ -1145,7 +1145,7 @@ selectInput("Club", "Club", choices = Soccer_data$Club, selected= Soccer_data$Cl
 Column {data-width=1200}
 -----------------
 
-###Stat Heat Map (Hover over to see the values)
+### Stat Heat Map (Hover over to see the values)
 
 ```{r, echo=FALSE, fig.width = 5, fig.height=10}
 renderD3heatmap({
@@ -1198,7 +1198,7 @@ sliderInput("pass", "Passes", 50, 1000, 100, step = 100)
 Column {.tabset}
 --------------------
 
-###Attacking 3rd
+### Attacking 3rd
 
 ```{r, echo=FALSE}
 renderPlot({
@@ -1212,7 +1212,7 @@ filter_pass <-
 ```
 
 
-###Middle 3rd
+### Middle 3rd
 
 ```{r, echo=FALSE}
 renderPlot({
@@ -1225,7 +1225,7 @@ filter_pass_mid <-
 })
 ```
 
-###Defensive 3rd
+### Defensive 3rd
 
 ```{r, echo=FALSE}
 renderPlot({
@@ -1257,7 +1257,7 @@ sliderInput("pass2", "Passes", 0, 1000, 100, step = 25)
 Column {.tabset}
 --------------------
 
-###All
+### All
 ```{r, echo=FALSE}
 renderPlot({
   Passing2$All_diffPct <- Passing2$All_PassPct*100 - Passing2$All_xPassPct*100
@@ -1270,7 +1270,7 @@ filter_pass <-
 })
 ```
 
-###Attacking 3rd
+### Attacking 3rd
 
 ```{r, echo=FALSE}
 renderPlot({
@@ -1285,7 +1285,7 @@ filter_pass <-
 ```
 
 
-###Middle 3rd
+### Middle 3rd
 
 ```{r, echo=FALSE}
 renderPlot({
@@ -1299,7 +1299,7 @@ filter_pass_mid <-
 })
 ```
 
-###Defensive 3rd
+### Defensive 3rd
 
 ```{r, echo=FALSE}
 renderPlot({
@@ -1314,7 +1314,7 @@ filter_pass_def <-
 ```
 
 
-###Team Comparison
+### Team Comparison
 
 ```{r,echo=FALSE}
 renderPlot({
