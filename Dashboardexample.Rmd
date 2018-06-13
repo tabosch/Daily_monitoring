@@ -54,7 +54,7 @@ catdata <- read.csv("catdata.csv")
 ```
 
 ```{r include=FALSE }
-catdata$Date <- lubridate::ymd(catdata$Date)
+catdata$Date <- lubridate::mdy(catdata$Date)
 catdata$Week <- lubridate::isoweek(catdata$Date)
 catdata$day <- lubridate::wday(catdata$Date, label = TRUE, abbr = FALSE)
 
@@ -433,6 +433,16 @@ gps_date <- reactive({
 Column {.tabset}
 -------------------
 
+###Player Report
+```{r,echo=FALSE}
+renderPlot({
+  
+  ggplot(data=subset(catdata, Position %in% c("F", "M", "D") & Date == gps_date() & Period.Number > 0), aes(reorder(Period.Name, Period.Number), Player.Load, fill=Meters_minute))+geom_bar(stat="identity")+facet_wrap(~id)+geom_text(aes(y=5,label=Period.Name), angle=90, hjust=-.1, size=3)+theme(axis.title.x=element_blank(),
+                                                                                                                                                                                                                                                                                                     axis.text.x=element_blank(),
+                                                                                                                                                                                                                                                                                                     axis.ticks.x=element_blank())+scale_fill_gradient2(low="yellow", mid="green", high="red")
+})
+```
+
 ###Drill Intensity
 ```{r, echo=FALSE, fig.height=1000}
 renderPlot({
@@ -445,9 +455,9 @@ renderPlot({
   intensity_metric <- input$intensity_metric
   
   data$Period.Name <- fct_reorder(data$Period.Name, data$Period.Number)
-  data$Player.Name <- fct_reorder(data$Player.Name, data[,intensity_metric])
+  data$Player.Name <- fct_reorder(data$id, data[,intensity_metric])
   
-  ggplot(data, aes_string("Period.Name","Player.Name", fill=intensity_metric)) + 
+  ggplot(data, aes_string("Period.Name","id", fill=intensity_metric)) + 
     geom_tile() +
     scale_fill_gradient2(low="yellow", mid="green", high="red") +
     theme_minimal() +
@@ -573,7 +583,7 @@ barplot2 <- reactive({
   plot2 <-
     catdata %>%
     filter(id == input$Player_report, 
-           Date > max(Date) - days(21), Period.Number < 1) %>%
+           Date > max(catdata$Date) - days(21), Period.Number < 1) %>%
     group_by(id, Date, day) %>%
     select(id, Date, day, Player.Load, Odometer, Meters_minute)
   
@@ -597,7 +607,7 @@ barplot3 <- reactive({
     catdata %>%
     filter(id == input$Player_report, 
           Period.Number < 1)
-  ggplot(plot3, aes(day, Player.Load))+geom_violin(stat="ydensity")+geom_point(data=subset(plot3, Date >= max(Date) - lubridate::days(7)),colour="red", size = 3)+geom_text(data=subset(plot3, Date >= max(Date) - lubridate::days(7)), aes(label=round(Player.Load,0)), colour="red", size = 4, vjust=-.5) +coord_flip()+theme(axis.text=element_text(size=12),axis.title=element_text(size=14,face="bold"),plot.title = element_text(size = 14, face = "bold"))+xlab(" ")+ylab("Player Load (au) ")+ggtitle("Range of PL with Today's PL (Red Dot)")
+  ggplot(plot3, aes(day, Player.Load))+geom_violin(stat="ydensity")+geom_point(data=subset(plot3, Date >= max(catdata$Date) - lubridate::days(7)),colour="red", size = 3)+geom_text(data=subset(plot3, Date >= max(catdata$Date) - lubridate::days(7)), aes(label=round(Player.Load,0)), colour="red", size = 4, vjust=-.5) +coord_flip()+theme(axis.text=element_text(size=12),axis.title=element_text(size=14,face="bold"),plot.title = element_text(size = 14, face = "bold"))+xlab(" ")+ylab("Player Load (au) ")+ggtitle("Range of PL with Today's PL (Red Dot)")
 })
 
 renderPlot({
@@ -836,6 +846,7 @@ renderPlot({
   
   ggplot(data, aes(week_days, week_date, fill = total)) +
       geom_tile(colour = "white") + 
+      geom_text(aes(label=workload_metric)) +
       facet_wrap(~months) +
       theme_bw() +
       scale_fill_gradient(low = "#39a78e", high = "#a73952", name = workload_metric) + 
